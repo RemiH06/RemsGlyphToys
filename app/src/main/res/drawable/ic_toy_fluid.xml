@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono del carrusel del Glyph Toy. Dibujo plano (no adaptive-icon) a
+     proposito: los adaptive-icon a veces se pintan en blanco cuando un
+     picker de otra app los carga sin componer foreground/background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M8,54 a46,46 0 1,0 92,0 a46,46 0 1,0 -92,0 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#3300E5A0"
+        android:strokeWidth="3" />
+    <path
+        android:pathData="M24,54 a30,30 0 1,0 60,0 a30,30 0 1,0 -60,0 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#8000E5A0"
+        android:strokeWidth="4" />
+    <path
+        android:pathData="M40,54 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0 Z"
+        android:fillColor="#FF00E5A0" />
+</vector>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono del carrusel del Glyph Toy de audio. Plano (no adaptive-icon),
+     mismo criterio que ic_toy_fluid.xml e ic_toy_gallery.xml. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,54 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0"
+        android:fillColor="#FF00E5A0" />
+    <path
+        android:pathData="M54,54 m-27,0 a27,27 0 1,0 54,0 a27,27 0 1,0 -54,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#6600E5A0"
+        android:strokeWidth="4" />
+    <path
+        android:pathData="M54,54 m-41,0 a41,41 0 1,0 82,0 a41,41 0 1,0 -82,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#2200E5A0"
+        android:strokeWidth="3" />
+</vector>

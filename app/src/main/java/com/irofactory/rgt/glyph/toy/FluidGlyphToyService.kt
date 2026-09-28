@@ -14,10 +14,10 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
-import com.irofactory.rgt.fluid.FluidBitmapRenderer
 import com.irofactory.rgt.fluid.FluidParams
 import com.irofactory.rgt.fluid.FluidSimulation
 import com.irofactory.rgt.fluid.applyAccelerometerGravity
+import com.irofactory.rgt.glyph.GlyphDotRenderer
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
@@ -126,7 +126,7 @@ class FluidGlyphToyService : Service() {
             while (isActive) {
                 if (registered) {
                     sim.step(dt = 0.033f)
-                    val bitmap = FluidBitmapRenderer.render(
+                    val bitmap = GlyphDotRenderer.render(
                         grid      = sim.rasterize(),
                         mask      = mask,
                         sizePx    = 32,

@@ -1,4 +1,4 @@
-package com.irofactory.rgt.fluid
+package com.irofactory.rgt.glyph
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -6,13 +6,14 @@ import android.graphics.Color
 import android.graphics.Paint
 
 /**
- * FluidBitmapRenderer
+ * GlyphDotRenderer
  * ───────────────────────────────────────────────────────────────────────────
- * Convierte la grilla rasterizada de [FluidSimulation] en un Bitmap que el
- * SDK de la Glyph Matrix escala 1:1 a los 25x25 LEDs reales via
- * GlyphMatrixObject.setImageSource.
+ * Convierte una grilla de brillo 0f..1f (mas su mascara circular) en un
+ * Bitmap que el SDK de la Glyph Matrix escala 1:1 a los 25x25 LEDs reales
+ * via GlyphMatrixObject.setImageSource. Compartido por todos los toys que
+ * dibujan por grilla (fluid, audio-sphere).
  */
-object FluidBitmapRenderer {
+object GlyphDotRenderer {
 
     fun render(
         grid:      Array<FloatArray>,

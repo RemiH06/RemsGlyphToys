@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.irofactory.rgt.audio.AudioSphereMatrixView
 import com.irofactory.rgt.fluid.FluidMatrixView
 import com.irofactory.rgt.gallery.GalleryMatrixView
 import com.irofactory.rgt.ui.theme.RemsGlyphToysTheme
@@ -70,6 +71,19 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         GalleryMatrixView()
         Text(
             text = "Toca para pedir permiso o cambiar de foto. En la matriz fisica, elige \"Gallery\" en el carrusel y manten presionado el boton Glyph para cambiarla.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = mc.textSecondary,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = "Pulse",
+            style = MaterialTheme.typography.headlineMedium,
+            color = mc.textPrimary
+        )
+        AudioSphereMatrixView()
+        Text(
+            text = "Reacciona a lo que se este reproduciendo en el telefono, sea por bocina o audifonos. Elige \"Pulse\" en el carrusel del boton Glyph para verlo en la matriz fisica.",
             style = MaterialTheme.typography.bodyMedium,
             color = mc.textSecondary,
             textAlign = TextAlign.Center

@@ -75,6 +75,25 @@
                 android:name="com.nothing.glyph.toy.longpress"
                 android:value="1"/>
         </service>
+
+        <!-- Glyph Toy: esfera que reacciona al audio de salida del sistema -->
+        <service
+            android:name=".glyph.toy.AudioSphereGlyphToyService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.nothing.glyph.TOY"/>
+            </intent-filter>
+            <meta-data
+                android:name="com.nothing.glyph.toy.name"
+                android:resource="@string/toy_name_pulse"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.image"
+                android:resource="@drawable/ic_toy_pulse"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.summary"
+                android:resource="@string/toy_summary_pulse"/>
+        </service>
     </application>
 
 </manifest>

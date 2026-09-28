@@ -4,27 +4,19 @@ import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.Message
 import android.os.Messenger
 import android.util.Log
-import com.irofactory.rgt.fluid.FluidParams
-import com.irofactory.rgt.fluid.FluidSimulation
-import com.irofactory.rgt.fluid.applyAccelerometerGravity
+import com.irofactory.rgt.audio.AudioLevelSource
+import com.irofactory.rgt.audio.AudioSphereSimulation
 import com.irofactory.rgt.glyph.GlyphDotRenderer
-import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
 import com.nothing.ketchum.GlyphMatrixFrame
 import com.nothing.ketchum.GlyphMatrixManager
 import com.nothing.ketchum.GlyphMatrixObject
-import com.nothing.ketchum.GlyphToy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,58 +25,30 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * FluidGlyphToyService
+ * AudioSphereGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
- * Glyph Toy para el Nothing Phone 3 (DEVICE_23112, Glyph Matrix 25x25):
- * una simulacion SPH de fluidos que reacciona al acelerometro y se dibuja
- * en tiempo real sobre la matriz fisica.
+ * Glyph Toy: esfera pulsante que respira con el volumen de salida del
+ * sistema y dispara ondas expansivas en los picos (estilo NCS). Mientras
+ * el toy esta seleccionado corre un loop propio a ~30fps leyendo
+ * Visualizer(0) y dibujando cada frame con setMatrixFrame.
  *
- * A diferencia de un Glyph Toy estatico (icono + texto), este mantiene un
- * loop propio a ~30fps mientras el sistema lo tiene enlazado (toy activo
- * en el carrusel del boton Glyph), dibujando cada frame con setMatrixFrame.
- *
- * Interaccion:
- *   - Touch-down (mantener presionado) → splash: empuja las particulas
- *     hacia afuera, como agitar el recipiente.
- *   - Long-press (evento "change") → reinicia la simulacion.
+ * Sin interaccion por touch: es puramente reactivo al audio, no necesita
+ * mensajes del boton Glyph mas alla del binder que el sistema espera.
  */
-class FluidGlyphToyService : Service() {
+class AudioSphereGlyphToyService : Service() {
 
-    private val tag = "FluidGlyphToy"
+    private val tag = "AudioSphereGlyphToy"
     private val scope = CoroutineScope(Dispatchers.Default)
     private var loopJob: Job? = null
 
     private var glyphMatrixManager: GlyphMatrixManager? = null
     private var registered = false
 
-    private val sim = FluidSimulation(cols = 25, rows = 25, circularBounds = true).also {
-        FluidParams().applyTo(it)
-    }
+    private val sim = AudioSphereSimulation(cols = 25, rows = 25)
     private val mask by lazy { sim.circularMask() }
+    private val audioSource = AudioLevelSource()
 
-    // ── Acelerometro ──────────────────────────────────────────────────────────
-    private val sensorManager by lazy { getSystemService(SensorManager::class.java) }
-    private val accelerometer by lazy { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
-
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent) {
-            if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-            applyAccelerometerGravity(sim, event.values[0], event.values[1], event.values[2])
-        }
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    }
-
-    // ── Mensajeria del Glyph Toy ────────────────────────────────────────────
-    private val handler = object : Handler(Looper.getMainLooper()) {
-        override fun handleMessage(msg: Message) {
-            if (msg.what != GlyphToy.MSG_GLYPH_TOY) { super.handleMessage(msg); return }
-            when (msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA)) {
-                GlyphToy.EVENT_ACTION_DOWN -> sim.splash()
-                GlyphToy.EVENT_CHANGE      -> sim.reset()
-            }
-        }
-    }
-    private val messenger = Messenger(handler)
+    private val messenger = Messenger(Handler(Looper.getMainLooper()))
 
     private val callback = object : GlyphMatrixManager.Callback {
         override fun onServiceConnected(name: ComponentName?) {
@@ -101,19 +65,16 @@ class FluidGlyphToyService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder {
-        if (!Common.is23112()) {
-            Log.w(tag, "Dispositivo no soportado: ${android.os.Build.MODEL}")
-        }
         glyphMatrixManager = GlyphMatrixManager.getInstance(applicationContext)
         glyphMatrixManager?.init(callback)
-        sensorManager.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
+        audioSource.start()
         return messenger.binder
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
         loopJob?.cancel()
         loopJob = null
-        sensorManager.unregisterListener(sensorListener)
+        audioSource.stop()
         try { glyphMatrixManager?.turnOff(); glyphMatrixManager?.unInit() } catch (e: Exception) { }
         glyphMatrixManager = null
         registered = false
@@ -125,7 +86,7 @@ class FluidGlyphToyService : Service() {
         loopJob = scope.launch {
             while (isActive) {
                 if (registered) {
-                    sim.step(dt = 0.033f)
+                    sim.step(dt = 0.033f, rawLevel = audioSource.currentLevel())
                     val bitmap = GlyphDotRenderer.render(
                         grid      = sim.rasterize(),
                         mask      = mask,

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -18,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.irofactory.rgt.fluid.FluidMatrixView
+import com.irofactory.rgt.gallery.GalleryMatrixView
 import com.irofactory.rgt.ui.theme.RemsGlyphToysTheme
 import com.irofactory.rgt.ui.theme.metroColors
 
@@ -41,6 +44,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
@@ -53,6 +57,19 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         FluidMatrixView()
         Text(
             text = "Vista previa. Manten presionado el boton Glyph y elige \"Fluid\" en el carrusel para verlo en la matriz fisica.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = mc.textSecondary,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = "Gallery",
+            style = MaterialTheme.typography.headlineMedium,
+            color = mc.textPrimary
+        )
+        GalleryMatrixView()
+        Text(
+            text = "Toca para pedir permiso o cambiar de foto. En la matriz fisica, elige \"Gallery\" en el carrusel y manten presionado el boton Glyph para cambiarla.",
             style = MaterialTheme.typography.bodyMedium,
             color = mc.textSecondary,
             textAlign = TextAlign.Center

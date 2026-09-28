@@ -143,7 +143,10 @@ internal fun applyAccelerometerGravity(sim: FluidSimulation, ax: Float, ay: Floa
     val totalMag = sqrt(hMag * hMag + vMag * vMag).coerceAtLeast(0.1f)
     val horizFactor = (vMag / totalMag).coerceIn(0f, 1f)
 
-    sim.gravX = -ax * (1f - horizFactor) * 2.0f
+    // gravX sin negar: la Glyph Matrix esta en la espalda del telefono, al
+    // girar a la izquierda (borde izquierdo abajo) el fluido debe caer hacia
+    // ese lado. Con -ax se iba al lado contrario (verificado en Phone 3 real).
+    sim.gravX = ax * (1f - horizFactor) * 2.0f
     sim.gravY = ay * (1f - horizFactor) * 2.0f
 
     if (horizFactor > 0.3f) {

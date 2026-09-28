@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
     <application
         android:allowBackup="true"
@@ -48,6 +49,28 @@
             <meta-data
                 android:name="com.nothing.glyph.toy.summary"
                 android:resource="@string/toy_summary_fluid"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.longpress"
+                android:value="1"/>
+        </service>
+
+        <!-- Glyph Toy: foto al azar de la galeria, reducida por average pooling -->
+        <service
+            android:name=".glyph.toy.GalleryGlyphToyService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="com.nothing.glyph.TOY"/>
+            </intent-filter>
+            <meta-data
+                android:name="com.nothing.glyph.toy.name"
+                android:resource="@string/toy_name_gallery"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.image"
+                android:resource="@drawable/ic_toy_gallery"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.summary"
+                android:resource="@string/toy_summary_gallery"/>
             <meta-data
                 android:name="com.nothing.glyph.toy.longpress"
                 android:value="1"/>

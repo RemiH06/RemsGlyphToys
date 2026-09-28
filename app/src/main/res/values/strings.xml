@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Rem\'s Glyph Toys</string>
+    <string name="toy_name_fluid">Fluid</string>
+    <string name="toy_summary_fluid">Simulacion de fluidos SPH reactiva al acelerometro</string>
+</resources>

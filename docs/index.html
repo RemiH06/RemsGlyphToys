@@ -260,7 +260,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
     <div class="step-row"><div class="step-num">01</div><p><b>Motor</b> · <code>FlipFluidSimulation</code>, <code>AudioBlobSimulation</code> o el pooling de <code>GalleryBitmapRenderer</code> producen una grilla 25x25 de brillo <code>0..1</code>.</p></div>
     <div class="step-row"><div class="step-num">02</div><p><b>Frame</b> · <code>GlyphFrames.fromGrid</code> aplica la forma real de la matriz (489 LEDs, filas de 7 a 25) y la convierte a un <code>IntArray</code> de 625 valores <code>0..4095</code>.</p></div>
     <div class="step-row"><div class="step-num">03</div><p><b>Matriz</b> · el servicio entrega el frame con <code>setMatrixFrame(int[])</code> en el hilo principal, a ~30 fps en fluid y pulse.</p></div>
-    <div class="callout warn"><div class="callout-title">timeout</div><p>Los toys animados llaman <code>setGlyphMatrixTimeout(false)</code>; sin eso el sistema regresa al toy por default a media animación.</p></div>
+    <div class="callout warn"><div class="callout-title">reposo</div><p>El sistema retira cualquier toy tras el ajuste <code>glyph_toy_timeout</code>. <code>setGlyphMatrixTimeout</code> del SDK no lo evita: el servicio del Glyph solo lo acepta de una lista fija de apps de Nothing.</p></div>
     <div class="callout"><div class="callout-title">bandas de pulse</div><p><code>AudioSpectrumSource</code> separa la FFT de <code>Visualizer</code> en sub, bajos, medios-bajos, voces, presencia y aire, cada una con su propio control de ganancia. <code>AudioBlobSimulation</code> las agrupa en tres blobs huecos que tienden a un polígono redondeado, porque la matriz solo distingue brillo, no color: hexágono (graves), diamante (voces) y triángulo (agudos). Giran lento y sus bordes respiran con lóbulos orgánicos. Las capas van en escala logarítmica: el tamaño de cada figura sale de su energía relativa a la familia más fuerte, así que la que más suena queda afuera, la que menos adentro, y solo se solapan cuando dos familias suenan casi igual. Con solo voces, graves y agudos quedan quietos en el centro y únicamente se mueve la figura de la voz.</p></div>
 
     <div class="diagram">
@@ -292,7 +292,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
 <span class="prompt">cd RemsGlyphToys</span>
 <span class="prompt">./gradlew :app:installDebug</span></code></pre>
     <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>. Después: abrir la app, elegir fotos para gallery, dar el permiso de audio a pulse y activar los toys en el carrusel del botón Glyph.</p></div>
-    <div class="callout"><div class="callout-title">siempre encendido</div><p>El sistema regresa la matriz al toy por default tras un rato sin uso, con cualquier toy. Los tres declaran soporte de AOD: elígelos como toy de Always-On en los ajustes del Glyph y el sistema los mantiene encendidos (les avisa cada minuto con <code>EVENT_AOD</code>).</p></div>
+    <div class="callout"><div class="callout-title">más tiempo encendido</div><p>Por default los toys se apagan a los 30 s, con cualquier toy. En los ajustes de Glyph Toys, "Duración del timeout" llega a 30 minutos; por encima de eso, con <code>adb shell settings put system glyph_toy_timeout &lt;ms&gt;</code>. El sistema también los apaga al desbloquear o al voltear el teléfono boca abajo. Los tres declaran soporte de AOD para usarlos como toy Always-On.</p></div>
   </div>
 </section>
 

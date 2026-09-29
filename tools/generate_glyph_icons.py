@@ -4,6 +4,7 @@ Genera los logos de Rem's Glyph Toys como matrices de la Glyph Matrix real
 
   app/src/main/res/drawable/ic_toy_*.xml         iconos del carrusel del boton Glyph
   app/src/main/res/drawable/ic_launcher_*.xml    icono de la app (logo del proyecto)
+  app/src/main/res/drawable/ic_app_logo.xml      logo para el header del menu de seleccion (fondo transparente)
   docs/logo.svg                                  logo para la documentacion
   design/glyphfactory_rgt.json                   los mismos disenos, editables en GlyphFactory
 
@@ -49,13 +50,28 @@ def outline(grid, radius_fn, thickness=0.6):
 
 def design_pulse():
     """Las tres capas del toy pulse: hexagono (graves), diamante (voces), triangulo (agudos)."""
-    # Tamanos buscados por fuerza bruta: el triangulo mas grande posible dejando
-    # al menos una celda vacia entre cualquier par de contornos cerrados.
+    # Hexagono y diamante: tamanos buscados por fuerza bruta para dejar al menos
+    # una celda vacia entre contornos. El triangulo va en pixeles exactos: a
+    # ese tamano una curva se lee como mancha.
     g = empty()
     outline(g, rounded_polygon(6, 10.9, 0.11, 0.0), 0.5)
     outline(g, rounded_polygon(4, 7.2, 0.14, 0.0), 0.5)
-    outline(g, rounded_polygon(3, 3.4, 0.32, -math.pi / 2), 0.5)
+    for r, c in pixel_triangle(apex_row=9, center_col=12, height=6, half_base=3):
+        g[r][c] = True
     return g
+
+
+def pixel_triangle(apex_row, center_col, height, half_base):
+    """Triangulo hueco casi equilatero: vertice arriba, lados escalonados y base completa."""
+    cells = []
+    for i in range(height):
+        r = apex_row + i
+        offset = round(half_base * i / (height - 1))
+        if i == height - 1:
+            cells += [(r, c) for c in range(center_col - offset, center_col + offset + 1)]
+        else:
+            cells += [(r, center_col - offset), (r, center_col + offset)]
+    return cells
 
 
 def design_fluid():
@@ -200,6 +216,12 @@ def main():
     (drawable / "ic_launcher_monochrome.xml").write_text(
         vector_drawable(pulse, ON_WHITE, OFF_DIM, pitch=2.7, origin=20.25,
                         header="Logo del proyecto, capa monocromatica.", include_off=False),
+        encoding="utf-8")
+
+    # Logo para el header del menu de seleccion: mismo diseno, sin fondo, para flotar sobre sherry_theme
+    (drawable / "ic_app_logo.xml").write_text(
+        vector_drawable(pulse, MAGENTA, "#2A2A2A", pitch=2.7, origin=20.25,
+                        header="Logo del proyecto para el header del menu de seleccion.", include_off=False),
         encoding="utf-8")
     (drawable / "ic_launcher_background.xml").write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n'

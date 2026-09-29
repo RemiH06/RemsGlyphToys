@@ -71,7 +71,7 @@ ariadne generate
 
 - **fluid**: real-time SPH simulation at the matrix's native 25x25 resolution; tilt to pour, hold the Glyph Button to splash, long-press to reset
 - **gallery**: photos chosen with the system Photo Picker, center-cropped and average-pooled to the matrix; long-press for another one, never the same twice in a row
-- **pulse**: FFT of the system output mix split into six bands (sub, bass, low-mids, vocals, presence, air), each with its own gain control, grouped into three nested shapes (hexagon, diamond, triangle) that grow and sharpen with their group and float on a spring toward the center; smaller shapes always stay inside larger ones with visible clearance, crossing only when sizes match; works regardless of audio route
+- **pulse**: FFT of the system output mix split into six bands (sub, bass, low-mids, vocals, presence, air), each with its own gain control, grouped into three hollow blobs that lean toward rounded polygons (hexagon, diamond, triangle), rotate slowly and breathe at their edges; layer sizes follow a log scale of each group relative to the loudest, so the loudest is always outside and the quietest inside, overlapping only when two groups are nearly equal; works regardless of audio route
 - **gallery** processing tuned for LEDs: auto-levels, 3x3 unsharp mask and 2.2 gamma on output
 - Previews match the physical matrix: the real 489-LED layout of the Nothing Phone (3), square LEDs, faint 25x25 grid
 - Animated toys disable the Glyph Matrix timeout so the system does not fall back to the default toy mid-animation

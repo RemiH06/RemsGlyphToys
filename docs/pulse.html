@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pulse · Rem's Glyph Toys</title>
+<meta name="description" content="Cómo funciona pulse: del audio de salida del sistema a tres figuras anidadas en la Glyph Matrix, con todas sus fórmulas.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|vt323:400&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS OSCURO (default) · sherry_theme ── */
+body {
+  --bg: #080808; --bg2: #0e0e0e; --bg3: #141414;
+  --text: #f0f0f0; --text2: #808080; --text3: #404040;
+  --border: #1e1e1e; --border2: #2a2a2a;
+  --magenta: #FF2D78; --cyan: #00F5FF; --lime: #AAFF00; --violet: #BF5FFF; --electric: #FFE600;
+  --lavender: #D4AAFF; --peach: #FFD4AA;
+  --accent: #FF2D78; --ok: #AAFF00; --warn: #FFE600; --info: #00F5FF;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --display: 'VT323', 'JetBrains Mono', monospace;
+  --radius: 2px;
+  --glow-accent: 0 0 8px rgba(255,45,120,.5);
+  --glow-cyan:   0 0 8px rgba(0,245,255,.5);
+  --glow-lime:   0 0 8px rgba(170,255,0,.5);
+  --glow-violet: 0 0 8px rgba(191,95,255,.5);
+}
+/* ── TOKENS CLARO ── */
+body.light {
+  --bg: #F5F2EC; --bg2: #EDEAD2; --bg3: #E0DCCA;
+  --text: #0a0a0a; --text2: #4a4a4a; --text3: #9a9a9a;
+  --border: #CCCAB8; --border2: #B8B6A4;
+  --magenta: #CC0055; --cyan: #007A80; --lime: #557700; --violet: #6622AA; --electric: #887700;
+  --lavender: #7744AA; --peach: #AA6633;
+  --accent: #CC0055; --ok: #557700; --warn: #887700; --info: #007A80;
+  --glow-accent: none; --glow-cyan: none; --glow-lime: none; --glow-violet: none;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.75; transition: background .25s, color .25s; }
+body.crt-on::after, body.light::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(240,240,240,.03) 2px 4px);
+}
+body.light.crt-on::after { background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(10,10,10,.015) 2px 4px); }
+body.light::before { z-index: 9998; background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(10,10,10,.018) 2px 4px); }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+a { color: var(--cyan); text-decoration: none; text-shadow: var(--glow-cyan); }
+a:hover { text-decoration: underline; }
+
+.level { position: relative; padding: 52px 0; }
+.level.alt { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 40px; }
+@media (max-width: 760px) { .wrap { padding: 0 16px; } .level { padding: 40px 0; } }
+
+.controls { position: fixed; top: 14px; right: 14px; z-index: 40; display: flex; gap: 8px; }
+.theme-btn, .btn {
+  font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 5px 12px;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text2); cursor: pointer; letter-spacing: .05em; transition: all .12s;
+}
+.theme-btn:hover, .theme-btn[aria-pressed="true"], .btn:hover, .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); text-shadow: var(--glow-accent); }
+
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(44px, 9vw, 72px); line-height: .95; }
+h1 .dim { color: var(--text3); }
+h2 {
+  font-family: var(--display); font-size: 26px; font-weight: 400; line-height: 1.1;
+  color: var(--cyan); text-shadow: var(--glow-cyan); letter-spacing: .05em; text-transform: uppercase;
+  margin: 0 0 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border2);
+}
+h2::before { content: '// '; color: var(--text3); }
+h3 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--magenta); text-shadow: var(--glow-accent); letter-spacing: .05em; margin: 26px 0 10px; }
+h3::before { content: '> '; color: var(--text3); }
+p { margin-bottom: 12px; }
+.muted { color: var(--text2); font-size: 12px; }
+ul.plain { margin: 0 0 12px 18px; }
+ul.plain li { margin-bottom: 4px; }
+ul.plain li::marker { color: var(--accent); }
+
+code {
+  font-family: var(--mono); font-size: 12px; background: var(--bg3); border: 1px solid var(--border2);
+  padding: 1px 5px; border-radius: var(--radius); color: var(--cyan); text-shadow: var(--glow-cyan);
+}
+pre {
+  background: var(--bg2); border: 1px solid var(--border2); border-left: 2px solid var(--accent);
+  border-radius: var(--radius); padding: 14px 18px; margin: 12px 0; overflow-x: auto;
+  font-size: 12px; line-height: 1.7; position: relative;
+}
+pre::before { content: attr(data-lang); position: absolute; top: 6px; right: 10px; font-size: 9px; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; }
+pre code { background: none; border: none; padding: 0; color: inherit; text-shadow: none; }
+
+/* Formulas: bloque propio, sin librerias externas */
+.formula {
+  margin: 14px 0; padding: 14px 18px; background: var(--bg2); border: 1px solid var(--border2);
+  border-left: 2px solid var(--violet); border-radius: var(--radius);
+  font-size: 13.5px; line-height: 2; overflow-x: auto; white-space: nowrap;
+}
+body:not(.light) .level.alt .formula { background: var(--bg); }
+.formula var { font-style: italic; color: var(--lavender); }
+.formula .op { color: var(--text3); }
+.formula .c { color: var(--electric); }
+.formula .note { display: block; white-space: normal; font-size: 11px; color: var(--text2); line-height: 1.6; margin-top: 4px; }
+.formula sub, .formula sup { font-size: 10px; }
+
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+th { background: var(--bg3); padding: 7px 12px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); text-shadow: var(--glow-cyan); border-bottom: 1px solid var(--border2); }
+td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:hover td { background: var(--bg3); }
+.table-scroll { overflow-x: auto; }
+td.num { font-variant-numeric: tabular-nums; }
+
+.callout { border-left: 2px solid var(--info); background: var(--bg2); padding: 12px 16px; margin: 14px 0; border-radius: 0 var(--radius) var(--radius) 0; }
+.level.alt .callout { background: var(--bg); }
+.callout-title { font-size: 9px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--info); text-shadow: var(--glow-cyan); margin-bottom: 4px; }
+.callout-title::before { content: '■ '; }
+.callout p { margin: 0; font-size: 12px; }
+.callout.warn { border-color: var(--warn); } .callout.warn .callout-title { color: var(--warn); text-shadow: none; }
+.callout.violet { border-color: var(--violet); } .callout.violet .callout-title { color: var(--violet); text-shadow: var(--glow-violet); }
+
+/* Recorrido */
+.timeline-item { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-dot {
+  width: 30px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; margin-top: 2px; border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text2); background: var(--bg3);
+}
+.timeline-dot.now { border-color: var(--ok); color: var(--ok); text-shadow: var(--glow-lime); }
+.timeline-item p { margin: 0; font-size: 12px; }
+.timeline-item b { color: var(--text); }
+
+/* Laboratorio */
+.lab { display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start; }
+@media (max-width: 820px) { .lab { grid-template-columns: 1fr; } .lab canvas { max-width: 320px; } }
+.lab canvas { width: 100%; aspect-ratio: 1; display: block; }
+.sliders { display: grid; gap: 7px; }
+.slider-group { border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 12px; background: var(--bg2); }
+.slider-group h4 { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; }
+.slider { display: grid; grid-template-columns: 118px 1fr 34px; align-items: center; gap: 10px; font-size: 11px; }
+.slider span:first-child { color: var(--text2); }
+.slider output { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; background: transparent; }
+input[type=range]::-webkit-slider-runnable-track { height: 2px; background: var(--border2); }
+input[type=range]::-moz-range-track { height: 2px; background: var(--border2); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 14px; margin-top: -6px; background: var(--magenta); border: none; border-radius: 1px; box-shadow: var(--glow-accent); }
+input[type=range]::-moz-range-thumb { width: 10px; height: 14px; background: var(--magenta); border: none; border-radius: 1px; }
+input[type=range]:focus-visible { outline: 1px dashed var(--accent); outline-offset: 2px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+
+footer { padding: 28px 0 48px; border-top: 1px solid var(--border2); }
+footer p { font-size: 11px; color: var(--text2); margin: 0; }
+.prompt::before { content: '$ '; color: var(--lime); text-shadow: var(--glow-lime); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body class="crt-on">
+
+<div class="controls">
+  <button class="theme-btn" id="crt-btn" type="button" aria-pressed="true">CRT</button>
+  <button class="theme-btn" id="theme-btn" type="button" aria-label="Cambiar a modo claro">CLARO</button>
+</div>
+
+<header class="level">
+  <div class="wrap">
+    <p class="muted"><a href="index.html">← rem's glyph toys</a></p>
+    <h1>PULSE<br><span class="dim">a detalle</span></h1>
+    <p style="max-width:62ch;margin-top:14px">Cómo pulse convierte el audio que suena en el teléfono en tres figuras anidadas sobre la Glyph Matrix: de dónde sale el sonido, cómo se separa, qué fórmula mueve cada figura y cómo se decidió cada una. Todas las constantes son las del código (<code>SpectrumAnalysis</code>, <code>AudioSpectrumSource</code> y <code>AudioBlobSimulation</code>).</p>
+  </div>
+</header>
+
+<!-- ── Laboratorio ─────────────────────────────────────────────── -->
+<section class="level alt" id="laboratorio">
+  <div class="wrap">
+    <h2>Laboratorio</h2>
+    <p class="muted">La misma simulación del toy, alimentada a mano en vez de por el micrófono de salida. Mueve una banda y observa qué figura responde; sube la dureza de una familia y observa cómo se afila.</p>
+    <div class="presets" role="group" aria-label="Escenas">
+      <button class="btn" data-preset="silencio" type="button">silencio</button>
+      <button class="btn" data-preset="voz" type="button">voz sostenida</button>
+      <button class="btn" data-preset="bajo" type="button">bajo y bombo</button>
+      <button class="btn" data-preset="drop" type="button">coro / drop</button>
+      <button class="btn" data-preset="ruido" type="button">ruido</button>
+      <button class="btn" id="auto-btn" type="button" aria-pressed="false">ciclo automático</button>
+    </div>
+    <div class="lab" style="margin-top:14px">
+      <canvas id="lab" width="600" height="600" aria-label="Simulación de pulse en la Glyph Matrix"></canvas>
+      <div class="sliders" id="sliders"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Recorrido ───────────────────────────────────────────────── -->
+<section class="level" id="recorrido">
+  <div class="wrap">
+    <h2>Recorrido</h2>
+    <p>pulse no se diseñó de una vez: cada versión se probó en el teléfono y la siguiente corrigió lo que no se sentía bien.</p>
+    <div class="timeline">
+      <div class="timeline-item"><div class="timeline-dot">01</div><p><b>Esfera estilo NCS.</b> Un círculo que crecía con el volumen (RMS del waveform) y lanzaba ondas en los picos. Funcionaba, pero se sentía como un pulso, no como una reacción a la música.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">02</div><p><b>Bandas, como en Crisantemo.</b> Se cambió el RMS por la FFT separada en 6 bandas. Una sola masa cuyo contorno deformaban lóbulos, uno por banda.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">03</div><p><b>Tres masas.</b> Una por familia (graves, voces, agudos), separadas entre sí y solapadas solo en equilibrio.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">04</div><p><b>Anidadas al centro.</b> Cada una dentro de otra, con un resorte hacia el centro; las familias calladas se quedan quietas en el centro como una masa pequeña.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">05</div><p><b>Formas.</b> La matriz no tiene color, solo brillo: cada familia se reconoce por su silueta (hexágono, diamante, triángulo).</p></div>
+      <div class="timeline-item"><div class="timeline-dot">06</div><p><b>Blobs curvos y capas logarítmicas.</b> Los polígonos rectos se veían rígidos: se cambiaron por el armónico principal de cada polígono. El tamaño pasó a una escala logarítmica para que la que más suena siempre quede afuera.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">07</div><p><b>Dureza.</b> La forma responde a la armonía: suave se redondea, áspero o brusco saca puntas.</p></div>
+      <div class="timeline-item"><div class="timeline-dot now">08</div><p><b>Base por familia.</b> El hexágono vivía con puntas porque cada cambio de nota del bajo contaba como golpe; ahora cada familia se mide contra su propio nivel habitual.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Fuente ──────────────────────────────────────────────────── -->
+<section class="level alt" id="fuente">
+  <div class="wrap">
+    <h2>De dónde sale el sonido</h2>
+    <p><code>AudioSpectrumSource</code> abre un <code>Visualizer</code> sobre la <b>sesión 0</b>, que es la mezcla de salida del sistema: lo que suene en el teléfono, de cualquier app, <b>antes</b> de rutearse a la bocina, a audífonos o a Bluetooth. Por eso reacciona igual sin importar por dónde sale el sonido. Android exige <code>RECORD_AUDIO</code> para usarlo y <code>MODIFY_AUDIO_SETTINGS</code> para la sesión 0, aunque no se graba nada ni se usa el micrófono.</p>
+    <ul class="plain">
+      <li>Tamaño de captura: el máximo del dispositivo, 1024 muestras → 512 bins de frecuencia.</li>
+      <li>Ancho de cada bin: <code>fs / 1024</code> ≈ 43 Hz a 44.1 kHz (≈ 47 Hz a 48 kHz).</li>
+      <li>La FFT llega en 8 bits con el formato <code>[Re₀, Re₅₁₂, Re₁, Im₁, Re₂, Im₂, …]</code>.</li>
+      <li>Un cuadro cada ~33 ms: la misma cadencia que la matriz.</li>
+    </ul>
+    <div class="formula"><var>M</var><sub>k</sub> <span class="op">=</span> √( Re<sub>k</sub>² <span class="op">+</span> Im<sub>k</sub>² )<span class="note">Magnitud de cada bin k.</span></div>
+    <h3>Volumen real</h3>
+    <p>Las bandas se normalizan solas, así que no dicen si hay silencio. El volumen verdadero sale aparte de <code>getMeasurementPeakRms</code>, en milibeles:</p>
+    <div class="formula"><var>L</var> <span class="op">=</span> clamp( (<var>rms</var><sub>mB</sub> <span class="op">+</span> <span class="c">5500</span>) / <span class="c">4500</span>, 0, 1 )<span class="note">−5500 mB (≈ −55 dB) es silencio práctico; −1000 mB ya es fuerte. Se suaviza con subida τ = 0.05 s y bajada τ = 0.3 s.</span></div>
+    <h3>Suavizado asimétrico</h3>
+    <p>Casi todo en pulse se suaviza con la misma regla, con una constante de tiempo distinta para subir y para bajar. Subir rápido hace que un ataque se vea; bajar lento hace que "resuene":</p>
+    <div class="formula"><var>s</var> <span class="op">←</span> <var>s</var> <span class="op">+</span> (<var>x</var> <span class="op">−</span> <var>s</var>) · (1 <span class="op">−</span> e<sup>−Δt/τ</sup>) ,&nbsp;&nbsp; τ <span class="op">=</span> τ<sub>subida</sub> si <var>x</var> &gt; <var>s</var>, τ<sub>bajada</sub> si no<span class="note">Δt es el tiempo del cuadro; la fórmula no depende de los fps.</span></div>
+  </div>
+</section>
+
+<!-- ── Bandas ──────────────────────────────────────────────────── -->
+<section class="level" id="bandas">
+  <div class="wrap">
+    <h2>Las seis bandas</h2>
+    <p>Como las barras de Crisantemo, pero en vez de 24 barras parejas son 6 bandas agrupadas por lo que suena en cada rango:</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>#</th><th>Banda</th><th>Rango</th><th>Bins (a 43 Hz)</th><th>Qué suena ahí</th><th>Piso</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>sub</td><td class="num">20–90 Hz</td><td class="num">≈ 1</td><td>patada del bombo, sub-bajo, lo que se siente más que se oye</td><td class="num">6</td></tr>
+        <tr><td>1</td><td>bass</td><td class="num">90–250 Hz</td><td class="num">≈ 3</td><td>notas del bajo, cuerpo del bombo, fundamental de voces graves</td><td class="num">6</td></tr>
+        <tr><td>2</td><td>lowMid</td><td class="num">250–500 Hz</td><td class="num">≈ 6</td><td>cuerpo de guitarras, piano, cuerdas; calidez de la voz</td><td class="num">4</td></tr>
+        <tr><td>3</td><td>vocal</td><td class="num">500 Hz–2 kHz</td><td class="num">≈ 35</td><td>voces y melodía: donde vive la inteligibilidad</td><td class="num">3</td></tr>
+        <tr><td>4</td><td>presence</td><td class="num">2–5 kHz</td><td class="num">≈ 70</td><td>ataque, consonantes, el "filo" de guitarras y cajas</td><td class="num">2</td></tr>
+        <tr><td>5</td><td>air</td><td class="num">5–14 kHz</td><td class="num">≈ 209</td><td>platillos, hi-hats, brillo, sibilancias</td><td class="num">1.5</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Control de ganancia por banda</h3>
+    <p>Cada banda se mide contra su <b>propio pico reciente</b>, no contra las demás. Así una voz se mueve aunque el bajo domine la mezcla, y un bajo tenue se nota si está activo para su nivel:</p>
+    <div class="formula"><var>E</var><sub>b</sub> <span class="op">=</span> promedio de <var>M</var><sub>k</sub> en la banda <var>b</var><br>
+      <var>P</var><sub>b</sub> <span class="op">←</span> max( <var>E</var><sub>b</sub>, <var>P</var><sub>b</sub> · e<sup>−Δt/3</sup>, <var>piso</var><sub>b</sub> )<br>
+      <var>b</var><sub>b</sub> <span class="op">←</span> suavizado( clamp(<var>E</var><sub>b</sub> / <var>P</var><sub>b</sub>) · max(<var>L</var>, <span class="c">0.15</span>) ), τ<sub>subida</sub> <span class="op">=</span> <span class="c">0.04</span> s, τ<sub>bajada</sub> <span class="op">=</span> <span class="c">0.22</span> s
+      <span class="note">El pico cae a la mitad en ~2 s (τ = 3 s). El piso evita amplificar el ruido de fondo cuando una banda está casi vacía. Si L &lt; 0.02 (silencio) la banda va a 0.</span></div>
+  </div>
+</section>
+
+<!-- ── Familias y figuras ─────────────────────────────────────── -->
+<section class="level alt" id="figuras">
+  <div class="wrap">
+    <h2>Familias y figuras</h2>
+    <p>Las 6 bandas se agrupan en 3 familias. La matriz solo distingue brillo, así que cada familia se reconoce por su silueta:</p>
+    <div class="formula"><var>e</var><sub>graves</sub> <span class="op">=</span> <span class="c">0.6</span>·bass <span class="op">+</span> <span class="c">0.4</span>·sub&nbsp;&nbsp;&nbsp;
+      <var>e</var><sub>voces</sub> <span class="op">=</span> <span class="c">0.6</span>·vocal <span class="op">+</span> <span class="c">0.4</span>·lowMid&nbsp;&nbsp;&nbsp;
+      <var>e</var><sub>agudos</sub> <span class="op">=</span> <span class="c">0.55</span>·presence <span class="op">+</span> <span class="c">0.45</span>·air</div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Familia</th><th>Figura</th><th>k (lados)</th><th>Amplitud de forma</th><th>Giro ω</th><th>Lóbulos (bandas → bultos)</th><th>Deriva</th><th>Grosor</th></tr></thead>
+      <tbody>
+        <tr><td>graves</td><td>hexágono, lado plano arriba</td><td class="num">6</td><td class="num">0.07</td><td class="num">+0.06 rad/s</td><td>sub → 2 · bass → 3</td><td class="num">1.2</td><td class="num">1.0</td></tr>
+        <tr><td>voces</td><td>diamante, vértices en los ejes</td><td class="num">4</td><td class="num">0.14</td><td class="num">−0.09 rad/s</td><td>lowMid → 2 · vocal → 5</td><td class="num">2.0</td><td class="num">0.9</td></tr>
+        <tr><td>agudos</td><td>triángulo, vértice arriba</td><td class="num">3</td><td class="num">0.24</td><td class="num">+0.13 rad/s</td><td>presence → 5 · air → 7</td><td class="num">1.5</td><td class="num">0.85</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Los números de bultos, sus ángulos y sentidos de giro son una decisión estética; lo interpretable es el tamaño de cada bulto (qué tan activa está su banda) y su velocidad.</p>
+
+    <h3>Capas en escala logarítmica</h3>
+    <p>El tamaño de cada figura no sale de su energía sola sino de su proporción con la familia que más suena. En escala logarítmica, el doble de energía ya se ve bien separado, y familias parecidas quedan con tamaños parecidos:</p>
+    <div class="formula"><var>R</var><sub>ext</sub> <span class="op">=</span> <span class="c">3.0</span> <span class="op">+</span> <span class="c">8.6</span> · <var>e</var><sub>max</sub><sup>0.7</sup><br>
+      <var>r</var><sub>i</sub> <span class="op">=</span> max( <span class="c">1.0</span>, <var>R</var><sub>ext</sub> · ( (<var>e</var><sub>i</sub> <span class="op">+</span> <span class="c">0.02</span>) / (<var>e</var><sub>max</sub> <span class="op">+</span> <span class="c">0.02</span>) )<sup>1.5</sup> )&nbsp;&nbsp;⇔&nbsp;&nbsp;log <var>r</var><sub>i</sub> <span class="op">=</span> log <var>R</var><sub>ext</sub> <span class="op">+</span> <span class="c">1.5</span> · log(<var>e</var><sub>i</sub>/<var>e</var><sub>max</sub>)
+      <span class="note">R y r en celdas de la matriz (el disco real mide 12.5). La que más suena siempre queda afuera; con la mitad de energía una figura queda a ~35 % del radio exterior; una familia casi callada colapsa al mínimo de 1 celda. El tamaño sigue a su objetivo con τ = 0.12 s. El exponente 1.5 salió de probar 0.8 primero: con 0.8 las capas quedaban casi encimadas.</span></div>
+
+    <h3>El contorno de cada figura</h3>
+    <p>Cada figura es un contorno en coordenadas polares alrededor de su centro. Tres términos: el polígono redondeado, las puntas de la dureza y los lóbulos de las bandas:</p>
+    <div class="formula"><var>w</var>(θ) <span class="op">=</span> cos( <var>k</var>·(θ <span class="op">−</span> φ) )<br>
+      <var>r</var>(θ) <span class="op">=</span> <var>s</var> · [ 1 <span class="op">+</span> <var>D</var>·<var>w</var> <span class="op">+</span> <var>S</var>·( (1 <span class="op">+</span> <var>w</var>) / 2 )<sup>1 + 10<var>h</var></sup> ] <span class="op">+</span> Σ<sub>j</sub> ½·<var>a</var><sub>j</sub>·<var>ℓ</var><sub>j</sub>·cos( <var>m</var><sub>j</sub>·(θ <span class="op">−</span> ψ<sub>j</sub>) )<br>
+      <var>D</var> <span class="op">=</span> <var>A</var> · (<span class="c">0.6</span> <span class="op">+</span> <span class="c">0.4</span><var>e</var>) · (<span class="c">0.4</span> <span class="op">+</span> <span class="c">0.6</span><var>h</var>)&nbsp;&nbsp;&nbsp;&nbsp;<var>S</var> <span class="op">=</span> <span class="c">0.45</span> · <var>h</var><sup>1.5</sup><br>
+      φ̇ <span class="op">=</span> ω · (1 <span class="op">+</span> <span class="c">0.5</span><var>e</var>)&nbsp;&nbsp;&nbsp;&nbsp;ψ̇<sub>j</sub> <span class="op">=</span> ω<sub>j</sub> · (1 <span class="op">+</span> <span class="c">1.5</span><var>ℓ</var><sub>j</sub>)
+      <span class="note">s: tamaño (capas logarítmicas) · k: lados · A: amplitud de forma · e: energía de la familia · h: dureza de la familia · a<sub>j</sub>, m<sub>j</sub>, ℓ<sub>j</sub>: amplitud, número de bultos y nivel de la banda j · φ, ψ<sub>j</sub>: fases que giran. cos(kθ) es el armónico principal del polígono de k lados: un polígono redondeado, no sus lados rectos (esos se veían rígidos). Elevar el perfil del vértice a 1 + 10h lo vuelve angosto, así que con dureza solo el vértice se estira: la punta.</span></div>
+  </div>
+</section>
+
+<!-- ── Dureza ──────────────────────────────────────────────────── -->
+<section class="level" id="dureza">
+  <div class="wrap">
+    <h2>Dureza</h2>
+    <p>No es calidad de audio: es qué tan <b>armonioso</b> o <b>áspero</b> suena cada familia. Un coro sostenido es suave; un rap, una batería o una guitarra distorsionada son ásperos. <code>SpectrumAnalysis</code> lo estima por familia con tres señales de la misma FFT.</p>
+    <h3>Planitud (tonal contra ruidoso)</h3>
+    <p>Un sonido tonal concentra su potencia en pocos picos; el ruido la reparte pareja. La planitud espectral (entropía de Wiener) es la media geométrica entre la aritmética:</p>
+    <div class="formula"><var>F</var> <span class="op">=</span> exp( promedio ln(<var>M</var><sub>k</sub>² <span class="op">+</span> 1) ) / promedio (<var>M</var><sub>k</sub>² <span class="op">+</span> 1)<span class="note">≈ 0 con un tono puro, ≈ 0.6 con ruido blanco. Se mide sobre la potencia (M²), no la magnitud: la FFT del Visualizer no usa ventana y un tono "fuga" energía débil a todas las barras; en potencia esa fuga casi no pesa. Con magnitud, un tono puro daba 0.55, casi como el ruido.</span></div>
+    <h3>Brusquedad</h3>
+    <p>Cuánto sube el espectro de un cuadro al siguiente (flujo espectral positivo). Capta golpes y ataques, y también el batido de dos notas muy pegadas que la resolución no alcanza a separar en picos:</p>
+    <div class="formula"><var>Φ</var> <span class="op">=</span> Σ max(0, <var>M</var><sub>k</sub> <span class="op">−</span> <var>M</var>′<sub>k</sub>) / Σ (<var>M</var><sub>k</sub> <span class="op">+</span> <var>M</var>′<sub>k</sub>)<span class="note">M′ es el cuadro anterior. 0 si nada cambia, 1 si el sonido aparece de golpe desde el silencio.</span></div>
+    <h3>Aspereza (Plomp-Levelt)</h3>
+    <p>Dos tonos cercanos "baten" y suenan ásperos; es la disonancia sensorial que midieron Plomp y Levelt (1965). Se usa la curva ajustada por Sethares sobre los picos más fuertes:</p>
+    <div class="formula"><var>x</var> <span class="op">=</span> <span class="c">0.24</span> · |<var>f</var><sub>2</sub> <span class="op">−</span> <var>f</var><sub>1</sub>| / ( <span class="c">0.0207</span> · min(<var>f</var><sub>1</sub>, <var>f</var><sub>2</sub>) <span class="op">+</span> <span class="c">18.96</span> )<br>
+      <var>d</var> <span class="op">=</span> min(<var>a</var><sub>1</sub>, <var>a</var><sub>2</sub>) · ( e<sup>−3.51<var>x</var></sup> <span class="op">−</span> e<sup>−5.75<var>x</var></sup> )<br>
+      <var>R</var> <span class="op">=</span> clamp( Σ<var>d</var> / Σ min(<var>a</var><sub>1</sub>, <var>a</var><sub>2</sub>) / <span class="c">0.18</span> , 0, 1 )
+      <span class="note">Sobre los 10 picos más fuertes de la familia (máximos locales por encima del 15 % del mayor), por cada par. 0.18 es el máximo de la curva, así R queda en 0..1. La distancia se escala por la banda crítica: el mismo intervalo en Hz es más áspero en graves que en agudos.</span></div>
+
+    <h3>Combinación por familia</h3>
+    <div class="formula"><var>h</var><sub>crudo</sub> <span class="op">=</span> <var>w</var><sub>F</sub>·smooth(<span class="c">0.10</span>, <span class="c">0.50</span>, <var>F</var>) <span class="op">+</span> <var>w</var><sub>Φ</sub>·smooth(<var>Φ</var><sub>min</sub>, <var>Φ</var><sub>max</sub>, <var>Φ</var>) <span class="op">+</span> <var>w</var><sub>R</sub>·smooth(<span class="c">0.05</span>, <span class="c">0.35</span>, <var>R</var>)<br>
+      <var>h</var><sub>abs</sub> <span class="op">←</span> suavizado( <var>h</var><sub>crudo</sub> · smooth(<span class="c">0.05</span>, <span class="c">0.20</span>, <var>P̄</var><sub>fam</sub>/<var>P̄</var><sub>max</sub>) ), τ<sub>subida</sub> <span class="op">=</span> <span class="c">0.03</span> s, τ<sub>bajada</sub> <span class="op">=</span> <span class="c">0.6</span> s
+      <span class="note">smooth es la interpolación suave entre dos umbrales (smoothstep). El segundo factor es una compuerta: una familia con menos del 5 % de la potencia promedio de la más fuerte no tiene dureza, porque lo poco que tiene es fuga de otras notas y se leería como ruido.</span></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Familia</th><th>Rango (dureza)</th><th>w<sub>F</sub> planitud</th><th>w<sub>Φ</sub> brusquedad</th><th>Φ min → max</th><th>w<sub>R</sub> aspereza</th><th>Peso absoluto</th></tr></thead>
+      <tbody>
+        <tr><td>graves</td><td class="num">20–200 Hz</td><td class="num">0.30</td><td class="num">0.70</td><td class="num">0.12 → 0.40</td><td class="num">0</td><td class="num">0.2</td></tr>
+        <tr><td>voces</td><td class="num">200 Hz–2 kHz</td><td class="num">0.30</td><td class="num">0.40</td><td class="num">0.05 → 0.20</td><td class="num">0.30</td><td class="num">0.6</td></tr>
+        <tr><td>agudos</td><td class="num">2–14 kHz</td><td class="num">0.45</td><td class="num">0.30</td><td class="num">0.05 → 0.20</td><td class="num">0.25</td><td class="num">0.6</td></tr>
+      </tbody>
+    </table></div>
+    <p>En graves la aspereza no se usa: con ~43 Hz por bin, dos notas graves distintas caen en la misma barra. Ahí manda la brusquedad, pero con umbrales altos, para que un cambio de nota del bajo no cuente como golpe. Además la familia de graves para en 200 Hz, no en 250, para no recoger la fuga de las notas medias justo arriba.</p>
+
+    <h3>Base por familia</h3>
+    <p>Cada familia aprende su dureza habitual y cuenta sobre todo lo que la rebasa. Sin esto el hexágono vivía con puntas: en música el bajo cambia de nota todo el tiempo.</p>
+    <div class="formula"><var>B</var> <span class="op">←</span> <var>B</var> <span class="op">+</span> (<var>h</var><sub>abs</sub> <span class="op">−</span> <var>B</var>) · (1 <span class="op">−</span> e<sup>−Δt/τ</sup>),&nbsp;&nbsp; τ <span class="op">=</span> <span class="c">8</span> s si sube, <span class="c">3</span> s si baja<br>
+      <var>h</var> <span class="op">=</span> <var>w</var><sub>abs</sub> · <var>h</var><sub>abs</sub> <span class="op">+</span> (1 <span class="op">−</span> <var>w</var><sub>abs</sub>) · smooth( 0, <span class="c">0.35</span>, <var>h</var><sub>abs</sub> <span class="op">−</span> <var>B</var> )
+      <span class="note">En graves pesa 80 % lo relativo (w<sub>abs</sub> = 0.2); en voces y agudos, 40 % (w<sub>abs</sub> = 0.6), para que una disonancia sostenida siga viéndose. La base aprende de la dureza ya suavizada: aprenderla de los cuadros crudos dejaba pasar cada pico completo.</span></div>
+    <div class="callout warn"><div class="callout-title">efecto secundario</div><p>Como los graves son sobre todo relativos, una sección que se mantiene agresiva mucho tiempo (un bajo distorsionado constante) se va redondeando poco a poco; vuelve a afilarse cuando algo rebasa ese nivel.</p></div>
+  </div>
+</section>
+
+<!-- ── Movimiento y LEDs ───────────────────────────────────────── -->
+<section class="level alt" id="movimiento">
+  <div class="wrap">
+    <h2>Anidado, movimiento y LEDs</h2>
+    <h3>Flotar hacia el centro</h3>
+    <p>Cada figura deriva despacio, con una amplitud proporcional a su energía, y un resorte la regresa a su objetivo. Una familia que no suena no flota: por eso, con solo voces, graves y agudos se quedan quietos en el centro.</p>
+    <div class="formula">objetivo <span class="op">=</span> <var>g</var>·<var>e</var> · ( sin(<var>t</var> <span class="op">+</span> σ), sin(1.3<var>t</var> <span class="op">+</span> 2σ)·cos(0.7<var>t</var>) ),&nbsp;&nbsp; <var>t</var>̇ <span class="op">=</span> <var>v</var> · (0.3 <span class="op">+</span> <var>e</var>)<br>
+      centro <span class="op">←</span> centro <span class="op">+</span> (objetivo <span class="op">−</span> centro) · (1 <span class="op">−</span> e<sup>−Δt/0.4</sup>)
+      <span class="note">g: deriva (1.2, 2.0, 1.5) · v: rapidez (0.35, 0.5, 0.9) · σ: semilla de cada figura. Los agudos tiemblan además ±0.12·e celdas a 11 y 13 rad/s.</span></div>
+    <h3>Anidado</h3>
+    <p>De la figura más grande a la más chica: la chica queda dentro de la grande con un hueco visible, y si no cabe se comprime. Solo cuando los tamaños se parecen (dos familias igual de fuertes) se permite que se crucen, con una transición suave para que no haya saltos:</p>
+    <div class="formula"><var>n</var> <span class="op">=</span> smooth( <span class="c">0.6</span>, <span class="c">2.2</span>, <var>s</var><sub>grande</sub> <span class="op">−</span> <var>s</var><sub>chica</sub> )&nbsp;&nbsp;&nbsp; hueco <span class="op">=</span> <var>t</var><sub>grande</sub> <span class="op">+</span> <var>t</var><sub>chica</sub> <span class="op">+</span> <span class="c">0.8</span><br>
+      si alcance<sub>chica</sub> &gt; interior<sub>grande</sub> <span class="op">−</span> hueco: compresión <span class="op">→</span> interior<sub>grande</sub> <span class="op">−</span> hueco, en proporción <var>n</var><br>
+      distancia entre centros ≤ interior<sub>grande</sub> <span class="op">−</span> alcance<sub>chica</sub> <span class="op">−</span> hueco, en proporción <var>n</var>
+      <span class="note">t: grosor del contorno. interior y alcance usan el radio real de cada figura, lóbulos y puntas incluidos. El hueco suma el grosor de ambos contornos: sin eso se tocaban a la vista aunque sus radios no.</span></div>
+    <h3>Del contorno a los LEDs</h3>
+    <div class="formula">borde<sub>i</sub>(<var>p</var>) <span class="op">=</span> clamp( 1 <span class="op">−</span> |‖<var>p</var> <span class="op">−</span> <var>c</var><sub>i</sub>‖ <span class="op">−</span> <var>r</var><sub>i</sub>(θ)| / <var>t</var><sub>i</sub>, 0, 1 )&nbsp;&nbsp;&nbsp; brillo<sub>i</sub> <span class="op">=</span> (<span class="c">0.4</span> <span class="op">+</span> <span class="c">0.6</span><var>e</var><sub>i</sub>) · (<span class="c">0.5</span> <span class="op">+</span> <span class="c">0.5</span><var>L</var>)<br>
+      LED(<var>p</var>) <span class="op">=</span> 1 <span class="op">−</span> Π<sub>i</sub> ( 1 <span class="op">−</span> borde<sub>i</sub>(<var>p</var>) · brillo<sub>i</sub> )
+      <span class="note">Figuras huecas: solo se enciende el contorno. La mezcla tipo "screen" hace que los cruces brillen más sin saturar de golpe. El resultado va a <code>GlyphFrames.fromGrid</code>, que aplica la forma real de la matriz (489 LEDs) y lo manda como 625 valores de 0 a 4095, a ~30 fps.</span></div>
+  </div>
+</section>
+
+<!-- ── Verificacion ────────────────────────────────────────────── -->
+<section class="level" id="verificacion">
+  <div class="wrap">
+    <h2>Verificación</h2>
+    <p><code>SpectrumAnalysisTest</code> genera audio sintético y le aplica una FFT sin ventana, cuantizada a 8 bits, como la del Visualizer: bloques de 1024 muestras a 44.1 kHz, un cuadro cada 33 ms, 8 s por escena, promediando el último segundo.</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Escena</th><th>Graves</th><th>Voces</th><th>Agudos</th><th>Lectura</th></tr></thead>
+      <tbody>
+        <tr><td>tono puro 440 Hz</td><td class="num">0.00</td><td class="num">0.03</td><td class="num">0.00</td><td>lo más suave posible</td></tr>
+        <tr><td>acorde de do mayor</td><td class="num">0.23</td><td class="num">0.15</td><td class="num">0.00</td><td>suave; algo de fuga en la frontera de graves</td></tr>
+        <tr><td>clúster de semitonos</td><td class="num">0.19</td><td class="num">0.30</td><td class="num">0.00</td><td>el batido de notas pegadas se nota</td></tr>
+        <tr><td>clúster agudo (1–1.2 kHz)</td><td class="num">0.00</td><td class="num">0.48</td><td class="num">0.00</td><td>la aspereza de Plomp-Levelt sí se resuelve</td></tr>
+        <tr><td>ruido blanco</td><td class="num">0.74</td><td class="num">0.74</td><td class="num">0.79</td><td>lo más áspero</td></tr>
+        <tr><td>acorde en golpes</td><td class="num">0.37</td><td class="num">0.33</td><td class="num">0.00</td><td>los ataques cuentan como brusquedad</td></tr>
+        <tr><td>bajo sostenido</td><td class="num">0.08</td><td class="num">0.00</td><td class="num">0.00</td><td>redondo: cambiar de nota no es un golpe</td></tr>
+        <tr><td>bombo</td><td class="num">0.59</td><td class="num">0.00</td><td class="num">0.00</td><td>puntiagudo</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Las formas se revisaron además renderizando la simulación cuadro por cuadro en escenas sintéticas (instrumental, solo voces, mezcla) antes de probarlas en el teléfono.</p>
+    <h3>Límites</h3>
+    <ul class="plain">
+      <li>La FFT del Visualizer es de 8 bits y ~43 Hz por bin: la aspereza es aproximada, sobre todo en graves.</li>
+      <li>Mide la mezcla completa, no cada instrumento por separado.</li>
+      <li>La calibración se hizo con audio sintético; con música real puede pedir ajustes (umbrales de <code>SpectrumAnalysis</code>, <code>LOG_SPREAD</code>, <code>ABSOLUTE_WEIGHT</code>).</li>
+      <li>El sistema retira cualquier toy tras su timeout (30 s por default) y al desbloquear o voltear el teléfono.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap"><p class="prompt">rem's glyph toys · pulse · Hex (@RemiH06) · iroFactory.sherry · AGPL-3.0</p></div>
+</footer>
+
+<script>
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+
+// ── Tema y CRT (mismas preferencias que la pagina principal) ──
+(() => {
+  const body = document.body, themeBtn = document.getElementById('theme-btn'), crtBtn = document.getElementById('crt-btn');
+  const load = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const save = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const applyTheme = (light) => { body.classList.toggle('light', light); themeBtn.textContent = light ? 'OSCURO' : 'CLARO'; themeBtn.setAttribute('aria-label', light ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro'); };
+  const applyCrt = (on) => { body.classList.toggle('crt-on', on); crtBtn.setAttribute('aria-pressed', String(on)); };
+  applyTheme(load('rgt-theme') === 'light');
+  applyCrt(load('rgt-crt') !== 'off');
+  themeBtn.addEventListener('click', () => { const l = !body.classList.contains('light'); applyTheme(l); save('rgt-theme', l ? 'light' : 'dark'); });
+  crtBtn.addEventListener('click', () => { const on = !body.classList.contains('crt-on'); applyCrt(on); save('rgt-crt', on ? 'on' : 'off'); });
+})();
+
+// ── Laboratorio: el modelo de AudioBlobSimulation, alimentado por los deslizadores ──
+(() => {
+  const cv = document.getElementById('lab');
+  const ctx = cv.getContext('2d');
+  const N = 25, C = N / 2, LED_R = 12.5, EDGE = LED_R - 0.2;
+  const LOG_SPREAD = 1.5, ENERGY_FLOOR = 0.02, REST_RADIUS = 3.0, OUTER_RANGE = 8.6, MIN_RADIUS = 1.0;
+  const CROSS = 0.6, CROSS_BLEND = 1.6, CLEARANCE = 0.8, SPIKE = 0.45;
+  const SPANS = [7, 11, 15, 17, 19, 21, 21, 23, 23, 25, 25, 25, 25, 25, 25, 25, 23, 23, 21, 21, 19, 17, 15, 11, 7];
+  const mask = SPANS.map(w => { const s = (N - w) / 2; return Array.from({ length: N }, (_, c) => c >= s && c < s + w); });
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const smoothstep = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+  const makeRing = (sides, shapeAmp, orient, turn, lobes, amp, spin, drift, speed, thick, seed) => ({
+    sides, shapeAmp, turn, lobes, amp, spin, drift, speed, thick, seed, rot: orient,
+    phase: lobes.map((_, i) => seed + i * 1.7), level: lobes.map(() => 0),
+    energy: 0, harsh: 0, size: REST_RADIUS, x: 0, y: 0, clock: seed, squeeze: 1,
+  });
+  const low  = makeRing(6, 0.07, 0, 0.06,             [2, 3], [1.4, 1.2], [0.13, -0.21], 1.2, 0.35, 1.0, 0);
+  const mid  = makeRing(4, 0.14, 0, -0.09,            [2, 5], [1.2, 1.0], [0.4, -0.55], 2.0, 0.5, 0.9, 2.1);
+  const high = makeRing(3, 0.24, -Math.PI / 2, 0.13,  [5, 7], [0.6, 0.5], [0.8, -1.2], 1.5, 0.9, 0.85, 4.3);
+  const rings = [low, mid, high];
+  const definition = (r) => r.shapeAmp * (0.6 + 0.4 * r.energy) * (0.4 + 0.6 * r.harsh);
+  const spikeLen = (r) => SPIKE * r.harsh * Math.sqrt(r.harsh);
+  const reach = (r) => 0.5 * r.lobes.reduce((s, _, i) => s + r.amp[i] * r.level[i], 0);
+  const outer = (r) => (r.size * (1 + definition(r) + spikeLen(r)) + reach(r)) * r.squeeze;
+  const inner = (r) => Math.max(0.5, (r.size * (1 - definition(r)) - reach(r)) * r.squeeze);
+  const radius = (r, th) => {
+    const wave = Math.cos(r.sides * (th - r.rot));
+    let v = r.size * (1 + definition(r) * wave + spikeLen(r) * Math.pow(0.5 + 0.5 * wave, 1 + 10 * r.harsh));
+    r.lobes.forEach((k, i) => { v += r.amp[i] * r.level[i] * 0.5 * Math.cos(k * (th - r.phase[i])); });
+    return Math.max(0.6, v * r.squeeze);
+  };
+
+  // ── Controles ──
+  const controls = [
+    { group: 'bandas', items: [
+      ['b0', 'sub 20–90 Hz'], ['b1', 'bass 90–250'], ['b2', 'lowMid 250–500'],
+      ['b3', 'vocal 0.5–2 kHz'], ['b4', 'presence 2–5 kHz'], ['b5', 'air 5–14 kHz']] },
+    { group: 'dureza por familia', items: [['h0', 'graves'], ['h1', 'voces'], ['h2', 'agudos']] },
+    { group: 'volumen', items: [['L', 'volumen real']] },
+  ];
+  const presets = {
+    silencio: { b: [0, 0, 0, 0, 0, 0], h: [0, 0, 0], L: 0 },
+    voz:      { b: [0, 0.05, 0.35, 0.9, 0.12, 0.02], h: [0, 0.08, 0], L: 0.7 },
+    bajo:     { b: [0.9, 0.85, 0.2, 0.05, 0.25, 0.15], h: [0.55, 0.1, 0.25], L: 0.8 },
+    drop:     { b: [0.75, 0.8, 0.65, 0.8, 0.6, 0.5], h: [0.35, 0.35, 0.45], L: 0.9 },
+    ruido:    { b: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8], h: [0.85, 0.8, 0.85], L: 0.8 },
+  };
+  const values = { b0: 0, b1: 0.05, b2: 0.35, b3: 0.9, b4: 0.12, b5: 0.02, h0: 0, h1: 0.08, h2: 0, L: 0.7 };
+  const host = document.getElementById('sliders');
+  const inputs = {};
+  for (const { group, items } of controls) {
+    const box = document.createElement('div'); box.className = 'slider-group';
+    box.innerHTML = `<h4>${group}</h4>`;
+    for (const [key, label] of items) {
+      const row = document.createElement('label'); row.className = 'slider';
+      row.innerHTML = `<span>${label}</span><input type="range" min="0" max="1" step="0.01" value="${values[key]}"><output>${values[key].toFixed(2)}</output>`;
+      const input = row.querySelector('input'), out = row.querySelector('output');
+      input.addEventListener('input', () => { values[key] = +input.value; out.textContent = (+input.value).toFixed(2); setAuto(false); });
+      inputs[key] = { input, out };
+      box.appendChild(row);
+    }
+    host.appendChild(box);
+  }
+  const setValues = (p) => {
+    p.b.forEach((v, i) => values['b' + i] = v); p.h.forEach((v, i) => values['h' + i] = v); values.L = p.L;
+    for (const k in inputs) { inputs[k].input.value = values[k]; inputs[k].out.textContent = values[k].toFixed(2); }
+  };
+  let redraw = () => {};   // con movimiento reducido, redibuja al cambiar valores
+  document.querySelectorAll('[data-preset]').forEach(btn => btn.addEventListener('click', () => { setAuto(false); setValues(presets[btn.dataset.preset]); redraw(); }));
+
+  // Ciclo automatico: recorre las escenas con algo de movimiento, como una cancion
+  let auto = false, autoT = 0;
+  const autoBtn = document.getElementById('auto-btn');
+  function setAuto(on) { auto = on; autoBtn.setAttribute('aria-pressed', String(on)); }
+  autoBtn.addEventListener('click', () => setAuto(!auto));
+  function autoValues(s) {
+    const seg = Math.floor(s / 5) % 4, kick = Math.max(0, Math.sin(s * 3.9)) ** 4, vox = 0.55 + 0.45 * Math.sin(s * 1.1) * Math.sin(s * 2.3);
+    const scenes = [
+      { b: [0.5 + 0.5 * kick, 0.6 + 0.4 * kick, 0.1, 0, 0.45, 0.35], h: [0.2 + 0.5 * kick, 0.1, 0.7], L: 0.8 },
+      { b: [0, 0, 0.35, 0.55 + 0.45 * vox, 0.05, 0], h: [0, 0.08, 0], L: 0.7 },
+      { b: [0.6 + 0.4 * kick, 0.7 + 0.3 * kick, 0.6, 0.5 + 0.4 * vox, 0.45, 0.4], h: [0.3 + 0.3 * kick, 0.4, 0.5], L: 0.9 },
+      { b: [0.1, 0.2, 0.5, 0.4 + 0.3 * vox, 0.3, 0.1], h: [0.05, 0.1, 0.1], L: 0.6 },
+    ];
+    return scenes[seg];
+  }
+
+  // Los valores de los deslizadores se suavizan como en SpectrumAnalysis
+  let bands = [0, 0, 0, 0, 0, 0], harsh = [0, 0, 0], loud = 0;
+  const follow = (v, t, dt, up, down) => v + (t - v) * (1 - Math.exp(-dt / (t > v ? up : down)));
+
+  let time = 0;
+  function step(dt) {
+    time += dt;
+    let target = { b: [0, 1, 2, 3, 4, 5].map(i => values['b' + i]), h: [0, 1, 2].map(i => values['h' + i]), L: values.L };
+    if (auto) { autoT += dt; target = autoValues(autoT); }
+    bands = bands.map((v, i) => follow(v, target.b[i], dt, 0.04, 0.22));
+    harsh = harsh.map((v, i) => follow(v, target.h[i], dt, 0.03, 0.6));
+    loud = follow(loud, target.L, dt, 0.05, 0.3);
+    const b = bands;
+    low.harsh = harsh[0]; mid.harsh = harsh[1]; high.harsh = harsh[2];
+    low.energy = 0.6 * b[1] + 0.4 * b[0];    low.level = [b[0], b[1]];
+    mid.energy = 0.4 * b[2] + 0.6 * b[3];    mid.level = [b[2], b[3]];
+    high.energy = 0.55 * b[4] + 0.45 * b[5]; high.level = [b[4], b[5]];
+
+    const maxE = Math.max(low.energy, mid.energy, high.energy);
+    const outerSize = REST_RADIUS + OUTER_RANGE * Math.pow(maxE, 0.7);
+    const sizeFollow = 1 - Math.exp(-dt / 0.12), drift = 1 - Math.exp(-dt / 0.4);
+    for (const r of rings) {
+      const ratio = (r.energy + ENERGY_FLOOR) / (maxE + ENERGY_FLOOR);
+      r.size += (Math.max(MIN_RADIUS, outerSize * Math.pow(ratio, LOG_SPREAD)) - r.size) * sizeFollow;
+      r.rot += r.turn * (1 + 0.5 * r.energy) * dt;
+      r.phase = r.phase.map((p, i) => p + r.spin[i] * (1 + 1.5 * r.level[i]) * dt);
+      r.clock += dt * r.speed * (0.3 + r.energy);
+      const a = r.drift * r.energy;
+      const tx = a * Math.sin(r.clock + r.seed), ty = a * Math.sin(r.clock * 1.3 + 2 * r.seed) * Math.cos(r.clock * 0.7);
+      r.x += (tx - r.x) * drift; r.y += (ty - r.y) * drift;
+    }
+    high.x += 0.12 * high.energy * Math.sin(time * 11); high.y += 0.12 * high.energy * Math.cos(time * 13);
+
+    for (const r of rings) r.squeeze = 1;
+    for (const r of rings) if (outer(r) > EDGE) r.squeeze = EDGE / outer(r);
+    const bySize = [...rings].sort((p, q) => q.size - p.size);
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+      const big = bySize[i], small = bySize[j];
+      const nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size);
+      if (nest <= 0) continue;
+      const gap = big.thick + small.thick + CLEARANCE;
+      const maxOuter = inner(big) - gap;
+      if (outer(small) > maxOuter) {
+        const fit = clamp(maxOuter / outer(small) * small.squeeze, 0.2, 1);
+        small.squeeze += (fit - small.squeeze) * nest;
+      }
+      const allowed = Math.max(0, inner(big) - outer(small) - gap);
+      const dx = small.x - big.x, dy = small.y - big.y, d = Math.hypot(dx, dy);
+      if (d > allowed && d > 1e-3) { const k = 1 - nest + nest * allowed / d; small.x = big.x + dx * k; small.y = big.y + dy * k; }
+    }
+    for (const r of rings) {
+      const d = Math.hypot(r.x, r.y), limit = Math.max(0, EDGE - outer(r));
+      if (d > limit && d > 1e-3) { r.x = r.x / d * limit; r.y = r.y / d * limit; }
+    }
+  }
+
+  const rim = (x, y, r) => {
+    const dx = x - r.x, dy = y - r.y;
+    return clamp(1 - Math.abs(Math.hypot(dx, dy) - radius(r, Math.atan2(dy, dx))) / r.thick, 0, 1);
+  };
+
+  function render() {
+    const on = cssVar('--magenta'), off = cssVar('--border2'), bg = cssVar('--bg2');
+    const glow = !document.body.classList.contains('light');
+    const pitch = cv.width / (N + 2), led = pitch * 0.78, inset = pitch + (pitch - led) / 2;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(cv.width / 2, cv.height / 2, pitch * (LED_R + 0.9), 0, 7); ctx.fill();
+    ctx.strokeStyle = off; ctx.lineWidth = 1; ctx.stroke();
+    const light = 0.5 + 0.5 * loud;
+    const levels = rings.map(r => (0.4 + 0.6 * r.energy) * light);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const px = x * pitch + inset, py = y * pitch + inset;
+      if (!mask[y][x]) { ctx.globalAlpha = 0.45; ctx.strokeStyle = off; ctx.strokeRect(px + 0.5, py + 0.5, led - 1, led - 1); continue; }
+      const gx = x + 0.5 - C, gy = y + 0.5 - C;
+      let dark = 1;
+      rings.forEach((r, i) => { dark *= 1 - rim(gx, gy, r) * levels[i]; });
+      const v = loud < 0.02 ? 0 : 1 - dark;
+      ctx.globalAlpha = glow ? 0.9 : 0.7; ctx.fillStyle = off; ctx.fillRect(px, py, led, led);
+      if (v < 0.02) continue;
+      ctx.fillStyle = on;
+      if (glow && v > 0.35) { const h = led * 0.45; ctx.globalAlpha = 0.14 * v; ctx.fillRect(px - h, py - h, led + 2 * h, led + 2 * h); }
+      ctx.globalAlpha = Math.max(0.1, v); ctx.fillRect(px, py, led, led);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  let last = null;
+  function frame(ts) {
+    const s = ts / 1000, dt = last === null ? 1 / 30 : Math.min(0.08, s - last);
+    last = s;
+    step(dt); render();
+    requestAnimationFrame(frame);
+  }
+  if (reduceMotion.matches) {
+    for (let i = 0; i < 60; i++) step(1 / 30);
+    render();
+    redraw = () => { for (let i = 0; i < 30; i++) step(1 / 30); render(); };
+    host.addEventListener('input', redraw);
+  } else {
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
+</body>
+</html>

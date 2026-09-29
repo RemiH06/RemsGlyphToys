@@ -10,6 +10,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
+import com.irofactory.rgt.gallery.GalleryBitmapRenderer
 import com.irofactory.rgt.gallery.GalleryImageProvider
 import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.Glyph
@@ -85,9 +86,15 @@ class GalleryGlyphToyService : Service() {
         loadJob?.cancel()
         loadJob = scope.launch {
             val pick = GalleryImageProvider.randomPick(applicationContext, avoid = current)
-            if (pick == null) Log.w(tag, "Sin fotos elegidas: se eligen tocando la vista previa en la app")
+            if (pick == null) {
+                Log.w(tag, "Sin fotos elegidas: se eligen en la app")
+            } else {
+                val s = pick.stats
+                Log.i(tag, "Foto ${pick.uri}: media=%.2f niveles=[%.2f, %.2f]".format(s.mean, s.low, s.high))
+            }
             current = pick?.uri ?: current
-            val frame = pick?.let { GlyphFrames.fromGrid(it.grid, mask) } ?: GlyphFrames.idleRing(mask)
+            val frame = pick?.let { GlyphFrames.fromGrid(it.grid, mask, GalleryBitmapRenderer.LED_GAMMA) }
+                ?: GlyphFrames.idleRing(mask)
 
             withContext(Dispatchers.Main) {
                 try {

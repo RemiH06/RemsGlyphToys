@@ -8,8 +8,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Messenger
 import android.util.Log
-import com.irofactory.rgt.audio.AudioLevelSource
-import com.irofactory.rgt.audio.AudioSphereSimulation
+import com.irofactory.rgt.audio.AudioBlobSimulation
+import com.irofactory.rgt.audio.AudioSpectrumSource
 import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
@@ -25,9 +25,9 @@ import kotlinx.coroutines.withContext
 /**
  * AudioSphereGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
- * Glyph Toy: esfera pulsante que respira con el volumen de salida del
- * sistema y dispara ondas expansivas en los picos (estilo NCS). Mientras
- * el toy esta seleccionado corre un loop propio a ~30fps.
+ * Glyph Toy "pulse": figura organica que respira con el audio de salida del
+ * sistema, deformada por bandas (bajos, voces, agudos). Mientras el toy
+ * esta seleccionado corre un loop propio a ~30fps.
  *
  * Si el Visualizer no arranca (permiso RECORD_AUDIO aun no concedido), el
  * loop lo reintenta cada ~2s y mientras tanto muestra un anillo tenue.
@@ -41,10 +41,10 @@ class AudioSphereGlyphToyService : Service() {
     private var glyphMatrixManager: GlyphMatrixManager? = null
     private var registered = false
 
-    private val sim = AudioSphereSimulation(cols = 25, rows = 25)
+    private val sim = AudioBlobSimulation()
     private val mask = GlyphFrames.circularMask()
     private val idleFrame by lazy { GlyphFrames.idleRing(mask) }
-    private val audioSource by lazy { AudioLevelSource(applicationContext) }
+    private val audioSource by lazy { AudioSpectrumSource(applicationContext) }
 
     private val messenger = Messenger(Handler(Looper.getMainLooper()))
 
@@ -94,7 +94,8 @@ class AudioSphereGlyphToyService : Service() {
 
                 if (registered) {
                     val frame = if (audioSource.isActive) {
-                        sim.step(dt = 0.033f, rawLevel = audioSource.currentLevel())
+                        audioSource.update(0.033f)
+                        sim.step(0.033f, audioSource.bands, audioSource.loudness)
                         GlyphFrames.fromGrid(sim.rasterize(), mask)
                     } else {
                         idleFrame

@@ -24,7 +24,7 @@ object GalleryBitmapRenderer {
         val poolSrc = Bitmap.createScaledBitmap(square, poolSrcSize, poolSrcSize, true)
         if (square !== source && square !== poolSrc) square.recycle()
 
-        val mask = GlyphFrames.circularMask(size)
+        val mask = GlyphFrames.circularMask()
         val block = poolSrcSize / size
         val pixels = IntArray(poolSrcSize * poolSrcSize)
         poolSrc.getPixels(pixels, 0, poolSrcSize, 0, 0, poolSrcSize, poolSrcSize)

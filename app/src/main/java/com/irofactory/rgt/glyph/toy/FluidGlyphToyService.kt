@@ -58,7 +58,7 @@ class FluidGlyphToyService : Service() {
     private val sim = FluidSimulation(cols = 25, rows = 25, circularBounds = true).also {
         FluidParams().applyTo(it)
     }
-    private val mask by lazy { sim.circularMask() }
+    private val mask = GlyphFrames.circularMask()
 
     // ── Acelerometro ──────────────────────────────────────────────────────────
     private val sensorManager by lazy { getSystemService(SensorManager::class.java) }

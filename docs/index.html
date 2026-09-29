@@ -90,7 +90,7 @@ a:hover { text-decoration: underline; }
 .cursor::after { content: '█'; color: var(--accent); margin-left: 4px; animation: blink 1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .hero p { color: var(--text2); margin: 14px 0 18px; max-width: 46ch; }
-.hero-matrix { width: 100%; aspect-ratio: 1; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); display: block; }
+.hero-matrix { width: 100%; aspect-ratio: 1; display: block; }
 
 /* Tipografia */
 h2 {
@@ -207,7 +207,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap hero-grid">
     <div>
       <h1 class="cursor">REM'S<br>GLYPH TOYS</h1>
-      <p>Tres Glyph Toys para la matriz 25x25 del Nothing Phone (3): un fluido que obedece a la gravedad, fotos de tu galería y una esfera que late con el audio.</p>
+      <p>Tres Glyph Toys para la matriz 25x25 del Nothing Phone (3): un fluido que obedece a la gravedad, fotos de tu galería y una figura que respira con el audio.</p>
       <span class="badge cyan">kotlin</span><span class="badge cyan">jetpack compose</span><span class="badge lime">glyph matrix sdk 2.0</span><span class="badge accent">agpl-3.0</span>
     </div>
     <canvas class="hero-matrix" id="matrix" width="480" height="480" aria-label="Simulación de la Glyph Matrix"></canvas>
@@ -227,13 +227,13 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       </article>
       <article class="card" id="gallery" style="--tone: var(--lime)">
         <h3>gallery</h3>
-        <p>Foto al azar de la galería, recortada al centro y promediada por bloques a 25x25.</p>
-        <dl><dt>long-press</dt><dd>otra foto</dd><dt>sin fotos</dt><dd>anillo tenue</dd></dl>
+        <p>Las fotos que eliges en la app, recortadas al centro y promediadas por bloques a la matriz.</p>
+        <dl><dt>long-press</dt><dd>otra foto</dd><dt>elegir</dt><dd>photo picker, sin permisos</dd><dt>sin fotos</dt><dd>anillo tenue</dd></dl>
       </article>
       <article class="card" id="pulse" style="--tone: var(--magenta)">
         <h3>pulse</h3>
-        <p>Esfera que respira con el volumen de salida y lanza ondas en cada pico.</p>
-        <dl><dt>audio</dt><dd>bocina, cable o bluetooth</dd><dt>sin permiso</dt><dd>anillo tenue</dd></dl>
+        <p>Figura que respira con el audio: los bajos la inflan, las voces la deforman, los agudos la hacen titilar.</p>
+        <dl><dt>bandas</dt><dd>6, por FFT</dd><dt>audio</dt><dd>bocina, cable o bluetooth</dd><dt>sin permiso</dt><dd>anillo tenue</dd></dl>
       </article>
     </div>
   </div>
@@ -256,10 +256,11 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap">
     <h2>Arquitectura</h2>
     <div class="panel"><p>Cada toy es un <code>Service</code> con el intent <code>com.nothing.glyph.TOY</code>; el sistema lo enlaza al elegirlo en el carrusel. La lógica de cada efecto vive en un motor puro, sin dependencias de Android, que la vista previa de la app reutiliza tal cual.</p></div>
-    <div class="step-row"><div class="step-num">01</div><p><b>Motor</b> · <code>FluidSimulation</code>, <code>AudioSphereSimulation</code> o el pooling de <code>GalleryBitmapRenderer</code> producen una grilla 25x25 de brillo <code>0..1</code>.</p></div>
-    <div class="step-row"><div class="step-num">02</div><p><b>Frame</b> · <code>GlyphFrames.fromGrid</code> aplica la máscara circular de la matriz y la convierte a un <code>IntArray</code> de 625 valores <code>0..4095</code>.</p></div>
+    <div class="step-row"><div class="step-num">01</div><p><b>Motor</b> · <code>FluidSimulation</code>, <code>AudioBlobSimulation</code> o el pooling de <code>GalleryBitmapRenderer</code> producen una grilla 25x25 de brillo <code>0..1</code>.</p></div>
+    <div class="step-row"><div class="step-num">02</div><p><b>Frame</b> · <code>GlyphFrames.fromGrid</code> aplica la forma real de la matriz (489 LEDs, filas de 7 a 25) y la convierte a un <code>IntArray</code> de 625 valores <code>0..4095</code>.</p></div>
     <div class="step-row"><div class="step-num">03</div><p><b>Matriz</b> · el servicio entrega el frame con <code>setMatrixFrame(int[])</code> en el hilo principal, a ~30 fps en fluid y pulse.</p></div>
     <div class="callout warn"><div class="callout-title">timeout</div><p>Los toys animados llaman <code>setGlyphMatrixTimeout(false)</code>; sin eso el sistema regresa al toy por default a media animación.</p></div>
+    <div class="callout"><div class="callout-title">bandas de pulse</div><p><code>AudioSpectrumSource</code> separa la FFT de <code>Visualizer</code> en sub, bajos, medios-bajos, voces, presencia y aire, cada una con su propio control de ganancia. Cada banda suma lóbulos al contorno que giran a su propia velocidad, por eso la figura nunca es simétrica.</p></div>
 
     <div class="diagram">
       <div class="diagram-bar"><span>ariadne · grafo del repo</span><a href="architecture/rem-s-glyph-toys.html" target="_blank" rel="noopener">abrir en pestaña ↗</a></div>
@@ -276,11 +277,10 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       <thead><tr><th>Permiso</th><th>Toy</th><th>Por qué</th></tr></thead>
       <tbody>
         <tr><td><code>com.nothing.ketchum.permission.ENABLE</code></td><td>todos</td><td>Acceso a la Glyph Matrix</td></tr>
-        <tr><td><code>READ_MEDIA_IMAGES</code> · <code>READ_MEDIA_VISUAL_USER_SELECTED</code></td><td>gallery</td><td>Leer fotos; el segundo cubre "seleccionar fotos"</td></tr>
         <tr><td><code>RECORD_AUDIO</code> · <code>MODIFY_AUDIO_SETTINGS</code></td><td>pulse</td><td>Exigidos por <code>Visualizer</code> sobre la mezcla de salida; no se graba nada</td></tr>
       </tbody>
     </table></div>
-    <div class="callout"><div class="callout-title">dónde se conceden</div><p>Los toys corren en segundo plano y no pueden mostrar diálogos: los permisos se piden tocando la vista previa de cada toy en la app.</p></div>
+    <div class="callout"><div class="callout-title">dónde se conceden</div><p>Los toys corren en segundo plano y no pueden mostrar diálogos: el permiso de audio se pide tocando la vista previa de pulse. Gallery no pide permisos: usa el Photo Picker del sistema y guarda acceso solo a las fotos que eliges.</p></div>
   </div>
 </section>
 
@@ -290,7 +290,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
     <pre data-lang="bash"><code><span class="prompt">git clone https://github.com/RemiH06/RemsGlyphToys.git</span>
 <span class="prompt">cd RemsGlyphToys</span>
 <span class="prompt">./gradlew :app:installDebug</span></code></pre>
-    <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>. Después: abrir la app, conceder permisos y activar los toys en el carrusel del botón Glyph.</p></div>
+    <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>. Después: abrir la app, elegir fotos para gallery, dar el permiso de audio a pulse y activar los toys en el carrusel del botón Glyph.</p></div>
   </div>
 </section>
 
@@ -604,33 +604,63 @@ createDitherBackground(document.getElementById('dither-arq'), { wave: '--violet'
   raf = requestAnimationFrame(draw);
 })();
 
-// ── Hero: matriz 25x25 con una esfera sintética, como el toy pulse ──
+// ── Hero: la Glyph Matrix real (489 LEDs) con la figura del toy pulse ──
+// Misma forma que GlyphFrames.ROW_SPANS y misma formula que AudioBlobSimulation,
+// con bandas sinteticas en vez de audio.
 (() => {
   const cv = document.getElementById('matrix');
   const ctx = cv.getContext('2d');
-  const N = 25, C = N / 2, R = N / 2 - 0.5;
-  let rings = [], lastBeat = 0;
+  const N = 25, C = N / 2, LED_R = 12.5;
+  const SPANS = [7, 11, 15, 17, 19, 21, 21, 23, 23, 25, 25, 25, 25, 25, 25, 25, 23, 23, 21, 21, 19, 17, 15, 11, 7];
+  const mask = SPANS.map(w => { const s = (N - w) / 2; return Array.from({ length: N }, (_, c) => c >= s && c < s + w); });
+  const LOBES = [1, 2, 3, 4, 5, 7], AMP = [1.8, 2.2, 1.5, 2.0, 1.1, 0.7], SPIN = [0.13, -0.21, 0.34, -0.47, 0.71, -1.1];
+  const phase = LOBES.map((_, i) => i * 1.3);
+  let last = 0;
+
+  function bandsAt(s) {
+    const beat = Math.max(0, Math.sin(s * 3.9)) ** 4;
+    const vox = 0.5 + 0.5 * Math.sin(s * 0.9) * Math.sin(s * 2.3);
+    return [beat, 0.35 + 0.5 * beat, 0.3 + 0.2 * Math.sin(s * 1.7), vox, 0.25 + 0.25 * Math.sin(s * 4.1), 0.3 * Math.max(0, Math.sin(s * 6.3))];
+  }
 
   function frame(t) {
-    const s = t / 1000;
-    const still = reduceMotion.matches;
-    const level = still ? 0.35 : 0.3 + 0.25 * Math.max(0, Math.sin(s * 5.2)) ** 3 + 0.08 * Math.sin(s * 1.3);
-    if (!still && s - lastBeat > 0.55 && Math.sin(s * 5.2) > 0.97) { rings.push({ r: 2, life: 1 }); lastBeat = s; }
-    rings = rings.filter(g => (g.r += 0.35, g.life -= 0.022) > 0 && g.r < R + 1);
+    const s = t / 1000, still = reduceMotion.matches;
+    const dt = Math.min(0.08, Math.max(0, s - last)); last = s;
+    const bands = bandsAt(still ? 1.2 : s), loud = 0.7;
+    bands.forEach((v, i) => phase[i] += SPIN[i] * (1 + v * 1.5) * dt);
 
-    const on = cssVar('--magenta'), off = cssVar('--dot-off'), glow = !document.body.classList.contains('light');
-    const cell = cv.width / N, dot = cell * 0.38, core = 2.2 + level * 8;
+    const radiusAt = (th) => {
+      let r = 3 + 0.35 * Math.sin(s * 1.1) + 4.2 * (0.6 * bands[1] + 0.4 * bands[0]) + 1.6 * bands[3] + 0.8 * bands[2];
+      for (let b = 0; b < 6; b++) r += AMP[b] * bands[b] * (0.5 + 0.5 * Math.cos(LOBES[b] * (th - phase[b])));
+      r += 0.45 * Math.sin(2 * th + s * 0.6) * (0.4 + loud);
+      return Math.min(LED_R + 0.4, Math.max(1.5, r));
+    };
+
+    const on = cssVar('--magenta'), off = cssVar('--border2'), bg = cssVar('--bg2');
+    const glow = !document.body.classList.contains('light');
+    // Una celda de margen por lado: el disco es mas grande que la grilla
+    const pitch = cv.width / (N + 2), led = pitch * 0.78, inset = pitch + (pitch - led) / 2;
     ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(cv.width / 2, cv.height / 2, pitch * (LED_R + 0.9), 0, 7); ctx.fill();
+    ctx.strokeStyle = off; ctx.lineWidth = 1; ctx.stroke();
+
+    const fill = 0.22 + 0.38 * loud;
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const d = Math.hypot(x + 0.5 - C, y + 0.5 - C);
-      if (d > R) continue;
-      let b = d < core - 1.2 ? 1 : Math.max(0, 1 - (d - (core - 1.2)) / 1.2);
-      for (const g of rings) b = Math.max(b, Math.max(0, 1 - Math.abs(d - g.r) / 1.1) * g.life);
-      const px = x * cell + cell / 2, py = y * cell + cell / 2;
-      if (b < 0.02) { ctx.globalAlpha = 1; ctx.fillStyle = off; ctx.beginPath(); ctx.arc(px, py, dot * 0.8, 0, 7); ctx.fill(); continue; }
+      const px = x * pitch + inset, py = y * pitch + inset;
+      if (!mask[y][x]) { ctx.globalAlpha = 0.45; ctx.strokeStyle = off; ctx.strokeRect(px + 0.5, py + 0.5, led - 1, led - 1); continue; }
+      const dx = x + 0.5 - C, dy = y + 0.5 - C, d = Math.hypot(dx, dy), r = radiusAt(Math.atan2(dy, dx));
+      let b = 0;
+      if (d <= r + 0.6) {
+        const rim = Math.max(0, 1 - Math.abs(d - (r - 0.5)) / 1.1);
+        const inside = d < r - 0.5 ? fill : Math.max(0, Math.min(1, (r + 0.6 - d) / 1.1)) * fill;
+        b = Math.max(inside, rim * (0.55 + 0.45 * loud));
+      }
+      ctx.globalAlpha = glow ? 0.9 : 0.7; ctx.fillStyle = off; ctx.fillRect(px, py, led, led);
+      if (b < 0.02) continue;
       ctx.fillStyle = on;
-      if (glow && b > 0.35) { ctx.globalAlpha = 0.16 * b; ctx.beginPath(); ctx.arc(px, py, dot * 2, 0, 7); ctx.fill(); }
-      ctx.globalAlpha = Math.max(0.08, b); ctx.beginPath(); ctx.arc(px, py, dot, 0, 7); ctx.fill();
+      if (glow && b > 0.35) { const h = led * 0.45; ctx.globalAlpha = 0.14 * b; ctx.fillRect(px - h, py - h, led + 2 * h, led + 2 * h); }
+      ctx.globalAlpha = Math.max(0.1, b); ctx.fillRect(px, py, led, led);
     }
     ctx.globalAlpha = 1;
     if (!still) requestAnimationFrame(frame);

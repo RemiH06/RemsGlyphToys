@@ -61,7 +61,6 @@ fun FluidMatrixView(
 
     // ── Grid rasterizado ──────────────────────────────────────────────────────
     var grid by remember { mutableStateOf(Array(25) { FloatArray(25) }) }
-    val mask  = remember { sim.circularMask() }
 
     LaunchedEffect(Unit) {
         var lastTime = withFrameMillis { it }
@@ -76,7 +75,6 @@ fun FluidMatrixView(
 
     GlyphMatrixCanvas(
         grid     = grid,
-        mask     = mask,
         neon     = sc.cyan,
         modifier = modifier,
         onClick  = { sim.splash() }

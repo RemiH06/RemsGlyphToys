@@ -54,7 +54,7 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             val dt = ((currentTime - lastTime) / 1000f).coerceIn(0.005f, 0.08f)
             lastTime = currentTime
             audioSource.update(dt)
-            sim.step(dt, audioSource.bands, audioSource.loudness)
+            sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness)
             grid = sim.rasterize()
         }
     }

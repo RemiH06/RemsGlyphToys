@@ -32,7 +32,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
             if (!audioSource.isActive) return idleFrame
         }
         audioSource.update(dt)
-        sim.step(dt, audioSource.bands, audioSource.loudness)
+        sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness)
         return GlyphFrames.fromGrid(sim.rasterize(), mask)
     }
 

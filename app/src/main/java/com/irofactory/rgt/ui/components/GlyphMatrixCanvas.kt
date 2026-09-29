@@ -2,40 +2,68 @@ package com.irofactory.rgt.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import com.irofactory.rgt.glyph.GlyphFrames
 import com.irofactory.rgt.ui.theme.sherryColors
+import kotlin.math.floor
 
 /**
  * Vista previa de la Glyph Matrix con la forma real del Phone (3): los 489
  * LEDs como cuadros sobre un disco oscuro, y el resto de la grilla 25x25
  * como celdas tenues, igual que el diagrama oficial de Nothing. En oscuro
  * los LEDs encendidos llevan halo (los --glow-* del sherry_theme).
+ *
+ * Con [onPaint] funciona como lienzo: reporta cada celda (fila, columna)
+ * que toca el dedo, con start = true al presionar (trazo nuevo) y false al
+ * arrastrar. [onClick] y [onPaint] no se combinan.
  */
 @Composable
 fun GlyphMatrixCanvas(
     grid:     Array<FloatArray>?,
     neon:     Color,
     modifier: Modifier = Modifier,
-    onClick:  (() -> Unit)? = null
+    onClick:  (() -> Unit)? = null,
+    onPaint:  ((row: Int, col: Int, start: Boolean) -> Unit)? = null
 ) {
     val sc = sherryColors
     val mask = remember { GlyphFrames.circularMask() }
-    val clickable = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    val paint by rememberUpdatedState(onPaint)
+    val input = when {
+        onPaint != null -> Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown()
+                down.consume()
+                cellAt(down.position, size.width.toFloat())?.let { paint?.invoke(it.first, it.second, true) }
+                while (true) {
+                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) break
+                    change.consume()
+                    cellAt(change.position, size.width.toFloat())?.let { paint?.invoke(it.first, it.second, false) }
+                }
+            }
+        }
+        onClick != null -> Modifier.clickable(onClick = onClick)
+        else -> Modifier
+    }
 
     Canvas(
         modifier = modifier
             .fillMaxWidth(0.78f)
             .aspectRatio(1f)
-            .then(clickable)
+            .then(input)
     ) {
         val n = GlyphFrames.SIZE
         // Una celda de margen por lado: el disco es mas grande que la grilla
@@ -82,6 +110,45 @@ fun GlyphMatrixCanvas(
                 drawRect(color = offColor, topLeft = topLeft, size = cell)
                 drawRect(color = neon.copy(alpha = b.coerceIn(0.1f, 1f)), topLeft = topLeft, size = cell)
             }
+        }
+    }
+}
+
+/** Celda (fila, columna) bajo [position], con la misma geometria que el dibujo; null fuera de la grilla. */
+private fun cellAt(position: Offset, width: Float): Pair<Int, Int>? {
+    val n = GlyphFrames.SIZE
+    val pitch = width / (n + 2)
+    val col = floor(position.x / pitch).toInt() - 1
+    val row = floor(position.y / pitch).toInt() - 1
+    return if (row in 0 until n && col in 0 until n) row to col else null
+}
+
+/**
+ * Miniatura de un glifo: solo el disco y los LEDs encendidos, sin rejilla
+ * ni halo (a este tamano solo estorban). El tamano lo pone [modifier].
+ */
+@Composable
+fun GlyphThumbnail(grid: Array<FloatArray>, neon: Color, modifier: Modifier = Modifier) {
+    val sc = sherryColors
+    Canvas(modifier = modifier.aspectRatio(1f)) {
+        val n = GlyphFrames.SIZE
+        val pitch = size.width / (n + 2)
+        val center = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(color = sc.bg2, radius = pitch * (GlyphFrames.LED_RADIUS + 0.9f), center = center)
+        drawCircle(
+            color = sc.border2,
+            radius = pitch * (GlyphFrames.LED_RADIUS + 0.9f),
+            center = center,
+            style = Stroke(width = 1f)
+        )
+        for (r in 0 until n) for (c in 0 until n) {
+            val b = grid[r][c]
+            if (b <= 0.02f) continue
+            drawRect(
+                color = neon.copy(alpha = b.coerceIn(0.1f, 1f)),
+                topLeft = Offset((c + 1) * pitch, (r + 1) * pitch),
+                size = Size(pitch, pitch)
+            )
         }
     }
 }

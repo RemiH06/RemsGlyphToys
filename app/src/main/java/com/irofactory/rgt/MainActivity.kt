@@ -21,6 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.irofactory.rgt.audio.AudioSphereMatrixView
 import com.irofactory.rgt.fluid.FluidMatrixView
 import com.irofactory.rgt.gallery.GalleryMatrixView
+import com.irofactory.rgt.glyphs.GlyphEditor
 import com.irofactory.rgt.ui.theme.RemsGlyphToysTheme
 import com.irofactory.rgt.ui.theme.crtScanlines
 import com.irofactory.rgt.ui.theme.sherryColors
@@ -47,15 +53,40 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize().crtScanlines(scanline),
                     containerColor = sc.bg
                 ) { innerPadding ->
-                    HomeScreen(modifier = Modifier.padding(innerPadding))
+                    AppScreens(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
     }
 }
 
+/**
+ * Inicio o editor de glifos. [NEW_GLYPH] abre uno nuevo; cualquier otro
+ * valor es el id del glifo a editar. El inicio conserva su scroll mientras
+ * el editor esta abierto.
+ */
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+private fun AppScreens(modifier: Modifier = Modifier) {
+    val holder = rememberSaveableStateHolder()
+    var editing by rememberSaveable { mutableStateOf<String?>(null) }
+    val target = editing
+    if (target == null) {
+        holder.SaveableStateProvider("home") {
+            HomeScreen(onEditGlyph = { editing = it ?: NEW_GLYPH }, modifier = modifier)
+        }
+    } else {
+        GlyphEditor(
+            glyphId = target.takeIf { it != NEW_GLYPH },
+            onClose = { editing = null },
+            modifier = modifier
+        )
+    }
+}
+
+private const val NEW_GLYPH = ""
+
+@Composable
+fun HomeScreen(onEditGlyph: (String?) -> Unit = {}, modifier: Modifier = Modifier) {
     val sc = sherryColors
 
     Column(
@@ -78,8 +109,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             index = "02",
             name = "gallery",
             neon = sc.lime,
-            description = "Elige las fotos que quieres ver; se promedian a 25x25. Toca la matriz para cambiar de foto; en la matriz fisica, pulsacion larga del boton Glyph."
-        ) { GalleryMatrixView() }
+            description = "Elige las fotos que quieres ver (se promedian a 25x25) o dibuja tus propios glifos con cinco intensidades. Todos entran a la misma rotacion. Toca la matriz para cambiar; en la matriz fisica, pulsacion larga del boton Glyph."
+        ) { GalleryMatrixView(onEditGlyph = onEditGlyph) }
 
         ToySection(
             index = "03",

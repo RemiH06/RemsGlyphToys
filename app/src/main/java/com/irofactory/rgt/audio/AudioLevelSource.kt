@@ -1,39 +1,55 @@
 package com.irofactory.rgt.audio
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
 import android.util.Log
+import androidx.core.content.ContextCompat
 import kotlin.math.sqrt
 
 /**
  * AudioLevelSource
  * ───────────────────────────────────────────────────────────────────────────
  * Envuelve Visualizer(0), que capta la mezcla de audio de SALIDA del
- * sistema (session 0 = master mix) antes de que se rutee a bocina,
- * audifonos con cable o Bluetooth. Por eso reacciona igual sin importar
- * por donde este saliendo el sonido.
+ * sistema (session 0 = output mix) antes de que se rutee a bocina,
+ * audifonos con cable o Bluetooth.
  *
- * No requiere RECORD_AUDIO: a diferencia de AudioRecord/MediaRecorder,
- * Visualizer no lee del microfono, lee del pipeline de salida.
+ * Permisos (segun el Javadoc de Visualizer en Android 16): usarlo requiere
+ * RECORD_AUDIO, y crearlo sobre la session 0 requiere MODIFY_AUDIO_SETTINGS.
  */
-class AudioLevelSource {
+class AudioLevelSource(private val context: Context) {
 
     private val tag = "AudioLevelSource"
     private var visualizer: Visualizer? = null
     private var waveform: ByteArray? = null
 
-    fun start() {
-        if (visualizer != null) return
-        try {
+    val isActive: Boolean get() = visualizer != null
+
+    fun hasPermission(): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /** Intenta arrancar el Visualizer. Regresa false si falta permiso o el sistema lo rechaza. */
+    fun start(): Boolean {
+        if (visualizer != null) return true
+        if (!hasPermission()) {
+            Log.w(tag, "Sin permiso RECORD_AUDIO, Visualizer no se inicia")
+            return false
+        }
+        return try {
             val captureSize = Visualizer.getCaptureSizeRange()[1]
             visualizer = Visualizer(0).apply {
                 setCaptureSize(captureSize)
                 enabled = true
             }
             waveform = ByteArray(captureSize)
+            true
         } catch (e: Exception) {
             Log.e(tag, "No se pudo inicializar Visualizer: ${e.message}")
             visualizer = null
             waveform = null
+            false
         }
     }
 

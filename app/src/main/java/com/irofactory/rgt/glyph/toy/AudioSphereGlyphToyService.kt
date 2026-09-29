@@ -3,7 +3,6 @@ package com.irofactory.rgt.glyph.toy
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
-import android.graphics.Color
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -11,29 +10,27 @@ import android.os.Messenger
 import android.util.Log
 import com.irofactory.rgt.audio.AudioLevelSource
 import com.irofactory.rgt.audio.AudioSphereSimulation
-import com.irofactory.rgt.glyph.GlyphDotRenderer
+import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
-import com.nothing.ketchum.GlyphMatrixFrame
 import com.nothing.ketchum.GlyphMatrixManager
-import com.nothing.ketchum.GlyphMatrixObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * AudioSphereGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
  * Glyph Toy: esfera pulsante que respira con el volumen de salida del
  * sistema y dispara ondas expansivas en los picos (estilo NCS). Mientras
- * el toy esta seleccionado corre un loop propio a ~30fps leyendo
- * Visualizer(0) y dibujando cada frame con setMatrixFrame.
+ * el toy esta seleccionado corre un loop propio a ~30fps.
  *
- * Sin interaccion por touch: es puramente reactivo al audio, no necesita
- * mensajes del boton Glyph mas alla del binder que el sistema espera.
+ * Si el Visualizer no arranca (permiso RECORD_AUDIO aun no concedido), el
+ * loop lo reintenta cada ~2s y mientras tanto muestra un anillo tenue.
  */
 class AudioSphereGlyphToyService : Service() {
 
@@ -45,8 +42,9 @@ class AudioSphereGlyphToyService : Service() {
     private var registered = false
 
     private val sim = AudioSphereSimulation(cols = 25, rows = 25)
-    private val mask by lazy { sim.circularMask() }
-    private val audioSource = AudioLevelSource()
+    private val mask = GlyphFrames.circularMask()
+    private val idleFrame by lazy { GlyphFrames.idleRing(mask) }
+    private val audioSource by lazy { AudioLevelSource(applicationContext) }
 
     private val messenger = Messenger(Handler(Looper.getMainLooper()))
 
@@ -54,6 +52,7 @@ class AudioSphereGlyphToyService : Service() {
         override fun onServiceConnected(name: ComponentName?) {
             try {
                 registered = glyphMatrixManager?.register(Glyph.DEVICE_23112) ?: false
+                glyphMatrixManager?.setGlyphMatrixTimeout(false)
             } catch (e: Exception) {
                 Log.e(tag, "Error al registrar: ${e.message}")
             }
@@ -67,7 +66,6 @@ class AudioSphereGlyphToyService : Service() {
     override fun onBind(intent: Intent?): IBinder {
         glyphMatrixManager = GlyphMatrixManager.getInstance(applicationContext)
         glyphMatrixManager?.init(callback)
-        audioSource.start()
         return messenger.binder
     }
 
@@ -84,29 +82,29 @@ class AudioSphereGlyphToyService : Service() {
     private fun startLoop() {
         loopJob?.cancel()
         loopJob = scope.launch {
+            var retryIn = 0f
             while (isActive) {
+                if (!audioSource.isActive) {
+                    retryIn -= 0.033f
+                    if (retryIn <= 0f) {
+                        audioSource.start()
+                        retryIn = 2f
+                    }
+                }
+
                 if (registered) {
-                    sim.step(dt = 0.033f, rawLevel = audioSource.currentLevel())
-                    val bitmap = GlyphDotRenderer.render(
-                        grid      = sim.rasterize(),
-                        mask      = mask,
-                        sizePx    = 32,
-                        colorArgb = Color.WHITE
-                    )
-                    try {
-                        val frame = GlyphMatrixFrame.Builder()
-                            .addTop(
-                                GlyphMatrixObject.Builder()
-                                    .setImageSource(bitmap)
-                                    .setScale(100)
-                                    .setPosition(0, 0)
-                                    .setBrightness(255)
-                                    .build()
-                            )
-                            .build(applicationContext)
-                        glyphMatrixManager?.setMatrixFrame(frame.render())
-                    } catch (e: GlyphException) {
-                        Log.e(tag, "Error al dibujar: ${e.message}")
+                    val frame = if (audioSource.isActive) {
+                        sim.step(dt = 0.033f, rawLevel = audioSource.currentLevel())
+                        GlyphFrames.fromGrid(sim.rasterize(), mask)
+                    } else {
+                        idleFrame
+                    }
+                    withContext(Dispatchers.Main) {
+                        try {
+                            glyphMatrixManager?.setMatrixFrame(frame)
+                        } catch (e: GlyphException) {
+                            Log.e(tag, "Error al dibujar: ${e.message}")
+                        }
                     }
                 }
                 delay(33)

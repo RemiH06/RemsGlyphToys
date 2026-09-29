@@ -1,11 +1,14 @@
 package com.irofactory.rgt.gallery
 
+import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 
 /**
  * GalleryImageProvider
@@ -15,6 +18,16 @@ import android.provider.MediaStore
  * resolucion completa solo para terminar promediandolo a 25x25).
  */
 object GalleryImageProvider {
+
+    /** Pedir ambos: con "seleccionar fotos" Android 14+ concede solo el segundo. */
+    val PERMISSIONS = arrayOf(
+        Manifest.permission.READ_MEDIA_IMAGES,
+        Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+    )
+
+    fun hasPermission(context: Context): Boolean = PERMISSIONS.any {
+        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
 
     fun pickRandomUri(context: Context): Uri? {
         val projection = arrayOf(MediaStore.Images.Media._ID)
@@ -37,6 +50,7 @@ object GalleryImageProvider {
 
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         var sampleSize = 1
         var w = bounds.outWidth
@@ -47,5 +61,13 @@ object GalleryImageProvider {
 
         val options = BitmapFactory.Options().apply { inSampleSize = sampleSize }
         return resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+    }
+
+    /** Foto al azar ya convertida a grilla de brillo 25x25, o null si no hay permiso/fotos. */
+    fun randomGrid(context: Context): Array<FloatArray>? {
+        if (!hasPermission(context)) return null
+        val uri = pickRandomUri(context) ?: return null
+        val source = loadDownsampled(context, uri) ?: return null
+        return GalleryBitmapRenderer.toGrid(source).also { source.recycle() }
     }
 }

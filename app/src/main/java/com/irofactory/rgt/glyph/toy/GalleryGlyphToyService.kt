@@ -3,6 +3,7 @@ package com.irofactory.rgt.glyph.toy
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -24,15 +25,15 @@ import kotlinx.coroutines.withContext
 /**
  * GalleryGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
- * Glyph Toy que muestra una foto al azar de la galeria del dispositivo,
+ * Glyph Toy que muestra una de las fotos elegidas en la app (Photo Picker),
  * reducida a la Glyph Matrix 25x25 por average pooling.
  *
  * Interaccion:
- *   - Al seleccionar el toy → carga y muestra una foto al azar.
- *   - Long-press (evento "change") → cambia a otra foto al azar.
+ *   - Al seleccionar el toy → muestra una foto al azar de la seleccion.
+ *   - Long-press (evento "change") → cambia a otra, sin repetir la actual.
  *
- * Sin permiso de fotos o con la galeria vacia muestra un anillo tenue, para
- * distinguir "no hay nada que mostrar" de "el toy no corre".
+ * Sin fotos elegidas muestra un anillo tenue, para distinguir "no hay nada
+ * que mostrar" de "el toy no corre".
  */
 class GalleryGlyphToyService : Service() {
 
@@ -42,6 +43,7 @@ class GalleryGlyphToyService : Service() {
 
     private var glyphMatrixManager: GlyphMatrixManager? = null
     private val mask = GlyphFrames.circularMask()
+    @Volatile private var current: Uri? = null
 
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
@@ -82,16 +84,10 @@ class GalleryGlyphToyService : Service() {
     private fun showRandomPhoto() {
         loadJob?.cancel()
         loadJob = scope.launch {
-            val grid = try {
-                GalleryImageProvider.randomGrid(applicationContext)
-            } catch (e: Exception) {
-                Log.e(tag, "Error al cargar foto: ${e.message}")
-                null
-            }
-            if (grid == null) {
-                Log.w(tag, "Sin foto (permiso=${GalleryImageProvider.hasPermission(applicationContext)})")
-            }
-            val frame = grid?.let { GlyphFrames.fromGrid(it, mask) } ?: GlyphFrames.idleRing(mask)
+            val pick = GalleryImageProvider.randomPick(applicationContext, avoid = current)
+            if (pick == null) Log.w(tag, "Sin fotos elegidas: se eligen tocando la vista previa en la app")
+            current = pick?.uri ?: current
+            val frame = pick?.let { GlyphFrames.fromGrid(it.grid, mask) } ?: GlyphFrames.idleRing(mask)
 
             withContext(Dispatchers.Main) {
                 try {

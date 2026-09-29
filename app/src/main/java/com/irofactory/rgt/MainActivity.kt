@@ -4,12 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,10 +19,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,8 +38,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             RemsGlyphToysTheme {
                 val sc = sherryColors
+                // CRT del sherry_theme sobre toda la app: blancas al 3% en oscuro, oscuras al 1.8% en claro
+                val scanline = if (sc.isDark) sc.text.copy(alpha = 0.03f) else sc.text.copy(alpha = 0.018f)
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().crtScanlines(scanline),
                     containerColor = sc.bg
                 ) { innerPadding ->
                     HomeScreen(modifier = Modifier.padding(innerPadding))
@@ -60,12 +54,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     val sc = sherryColors
-    val scanlines = if (sc.isDark) Modifier else Modifier.crtScanlines(sc.text.copy(alpha = 0.018f))
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .then(scanlines)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)
@@ -83,14 +75,14 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             index = "02",
             name = "gallery",
             neon = sc.lime,
-            description = "Una foto al azar de tu galeria, promediada a 25x25. Toca para pedir permiso o cambiar de foto; en la matriz fisica, pulsacion larga del boton Glyph."
+            description = "Elige las fotos que quieres ver; se promedian a 25x25. Toca la matriz para cambiar de foto; en la matriz fisica, pulsacion larga del boton Glyph."
         ) { GalleryMatrixView() }
 
         ToySection(
             index = "03",
             name = "pulse",
             neon = sc.magenta,
-            description = "Esfera que respira con lo que se este reproduciendo, por bocina o audifonos, y lanza ondas en los picos."
+            description = "Una figura que respira con lo que se este reproduciendo, por bocina o audifonos: los bajos la inflan, las voces la deforman y los agudos la hacen titilar."
         ) { AudioSphereMatrixView() }
 
         Text(
@@ -106,48 +98,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 private fun Header() {
     val sc = sherryColors
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "REM'S GLYPH TOYS",
-                style = MaterialTheme.typography.headlineLarge,
-                color = sc.text
-            )
-            BlinkingCursor(color = sc.accent)
-        }
+        Text(
+            text = "REM'S GLYPH TOYS",
+            style = MaterialTheme.typography.headlineLarge,
+            color = sc.text
+        )
         Text(
             text = "glyph matrix 25x25 · nothing phone (3)",
             style = MaterialTheme.typography.bodySmall,
             color = sc.text2
         )
     }
-}
-
-/** El `.cursor::after` del sherry_theme: bloque que parpadea en step-end cada 1s. */
-@Composable
-private fun BlinkingCursor(color: Color) {
-    val transition = rememberInfiniteTransition(label = "cursor")
-    val visible by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = keyframes {
-                durationMillis = 1000
-                1f at 0
-                0f at 500
-            },
-            repeatMode = RepeatMode.Restart,
-            initialStartOffset = StartOffset(0)
-        ),
-        label = "cursorAlpha"
-    )
-    Text(
-        text = "█",
-        style = MaterialTheme.typography.headlineLarge,
-        color = color,
-        modifier = Modifier
-            .padding(start = 4.dp)
-            .alpha(visible)
-    )
 }
 
 @Composable

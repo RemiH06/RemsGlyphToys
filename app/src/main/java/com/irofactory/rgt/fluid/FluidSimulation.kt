@@ -54,7 +54,8 @@ class FluidSimulation(
     // ── Centro y radio para bounds circulares ──────────────────────────────────
     val centerX: Float = cols / 2f
     val centerY: Float = rows / 2f
-    val boundsRadius: Float = minOf(cols, rows) / 2f - 0.5f
+    // 12.5 en la grilla de 25: el disco real de LEDs del Phone (3), ver GlyphFrames.ROW_SPANS
+    val boundsRadius: Float = minOf(cols, rows) / 2f
 
     init {
         // Inicializar particulas distribuidas uniformemente
@@ -222,19 +223,6 @@ class FluidSimulation(
         }
 
         return grid
-    }
-
-    // ── Mascara circular para el area util de la matriz ───────────────────────
-    fun circularMask(): Array<BooleanArray> {
-        val mask = Array(rows) { BooleanArray(cols) { false } }
-        for (r in 0 until rows) {
-            for (c in 0 until cols) {
-                val dx = c + 0.5f - centerX
-                val dy = r + 0.5f - centerY
-                mask[r][c] = sqrt(dx * dx + dy * dy) <= boundsRadius
-            }
-        }
-        return mask
     }
 
     // ── Splash: impulso radial hacia afuera, para interaccion por touch ───────

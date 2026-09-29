@@ -25,20 +25,17 @@ import com.irofactory.rgt.ui.theme.sherryColors
 import kotlinx.coroutines.isActive
 
 /**
- * AudioSphereMatrixView
- * ───────────────────────────────────────────────────────────────────────────
- * Vista previa en pantalla de la esfera de audio. Aqui se pide RECORD_AUDIO:
- * el toy corre en segundo plano y no puede mostrar el dialogo de permisos.
+ * Vista previa en pantalla del toy pulse. Aqui se pide RECORD_AUDIO: el toy
+ * corre en segundo plano y no puede mostrar el dialogo de permisos.
  */
 @Composable
 fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val sc = sherryColors
 
-    val sim = remember { AudioSphereSimulation(cols = 25, rows = 25) }
-    val audioSource = remember { AudioLevelSource(context.applicationContext) }
-    val mask = remember { sim.circularMask() }
-    var grid by remember { mutableStateOf(Array(25) { FloatArray(25) }) }
+    val sim = remember { AudioBlobSimulation() }
+    val audioSource = remember { AudioSpectrumSource(context.applicationContext) }
+    var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
     var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -56,7 +53,8 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             val currentTime = withFrameMillis { it }
             val dt = ((currentTime - lastTime) / 1000f).coerceIn(0.005f, 0.08f)
             lastTime = currentTime
-            sim.step(dt, audioSource.currentLevel())
+            audioSource.update(dt)
+            sim.step(dt, audioSource.bands, audioSource.loudness)
             grid = sim.rasterize()
         }
     }
@@ -64,7 +62,6 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         GlyphMatrixCanvas(
             grid    = grid,
-            mask    = mask,
             neon    = sc.magenta,
             onClick = if (hasPermission) null else {
                 { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
@@ -74,9 +71,9 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             Text(
                 text = "Toca para dar permiso de audio",
                 style = MaterialTheme.typography.bodySmall,
-                color = sc.text2,
+                color = sc.text,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(48.dp)
+                modifier = Modifier.padding(56.dp)
             )
         }
     }

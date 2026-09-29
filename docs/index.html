@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rem's Glyph Toys · Docs</title>
 <meta name="description" content="Glyph Toys para la Glyph Matrix 25x25 del Nothing Phone (3): fluid, gallery y pulse.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|vt323:400&display=swap" rel="stylesheet">
 <style>
@@ -222,8 +223,8 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
     <div class="toys">
       <article class="card" id="fluid" style="--tone: var(--cyan)">
         <h3>fluid</h3>
-        <p>Simulación SPH en la matriz; el fluido cae hacia donde inclinas el teléfono.</p>
-        <dl><dt>touch</dt><dd>salpica</dd><dt>long-press</dt><dd>reinicia</dd><dt>sensor</dt><dd>acelerómetro</dd></dl>
+        <p>Agua simulada con FLIP, como la <a href="https://mitxela.com/projects/fluid-pendant" target="_blank" rel="noopener">fluid pendant de mitxela</a>: cae hacia donde inclinas el teléfono, con oleaje y gotas.</p>
+        <dl><dt>touch</dt><dd>agita el agua</dd><dt>long-press</dt><dd>reinicia</dd><dt>sensor</dt><dd>acelerómetro</dd></dl>
       </article>
       <article class="card" id="gallery" style="--tone: var(--lime)">
         <h3>gallery</h3>
@@ -256,7 +257,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap">
     <h2>Arquitectura</h2>
     <div class="panel"><p>Cada toy es un <code>Service</code> con el intent <code>com.nothing.glyph.TOY</code>; el sistema lo enlaza al elegirlo en el carrusel. La lógica de cada efecto vive en un motor puro, sin dependencias de Android, que la vista previa de la app reutiliza tal cual.</p></div>
-    <div class="step-row"><div class="step-num">01</div><p><b>Motor</b> · <code>FluidSimulation</code>, <code>AudioBlobSimulation</code> o el pooling de <code>GalleryBitmapRenderer</code> producen una grilla 25x25 de brillo <code>0..1</code>.</p></div>
+    <div class="step-row"><div class="step-num">01</div><p><b>Motor</b> · <code>FlipFluidSimulation</code>, <code>AudioBlobSimulation</code> o el pooling de <code>GalleryBitmapRenderer</code> producen una grilla 25x25 de brillo <code>0..1</code>.</p></div>
     <div class="step-row"><div class="step-num">02</div><p><b>Frame</b> · <code>GlyphFrames.fromGrid</code> aplica la forma real de la matriz (489 LEDs, filas de 7 a 25) y la convierte a un <code>IntArray</code> de 625 valores <code>0..4095</code>.</p></div>
     <div class="step-row"><div class="step-num">03</div><p><b>Matriz</b> · el servicio entrega el frame con <code>setMatrixFrame(int[])</code> en el hilo principal, a ~30 fps en fluid y pulse.</p></div>
     <div class="callout warn"><div class="callout-title">timeout</div><p>Los toys animados llaman <code>setGlyphMatrixTimeout(false)</code>; sin eso el sistema regresa al toy por default a media animación.</p></div>
@@ -291,6 +292,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
 <span class="prompt">cd RemsGlyphToys</span>
 <span class="prompt">./gradlew :app:installDebug</span></code></pre>
     <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>. Después: abrir la app, elegir fotos para gallery, dar el permiso de audio a pulse y activar los toys en el carrusel del botón Glyph.</p></div>
+    <div class="callout"><div class="callout-title">siempre encendido</div><p>El sistema regresa la matriz al toy por default tras un rato sin uso, con cualquier toy. Los tres declaran soporte de AOD: elígelos como toy de Always-On en los ajustes del Glyph y el sistema los mantiene encendidos (les avisa cada minuto con <code>EVENT_AOD</code>).</p></div>
   </div>
 </section>
 

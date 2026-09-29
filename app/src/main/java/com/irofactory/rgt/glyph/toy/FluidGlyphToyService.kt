@@ -1,50 +1,36 @@
 package com.irofactory.rgt.glyph.toy
 
 import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import com.irofactory.rgt.fluid.FluidParams
-import com.irofactory.rgt.fluid.FluidSimulation
-import com.irofactory.rgt.fluid.applyAccelerometerGravity
+import com.irofactory.rgt.fluid.FlipFluidSimulation
+import com.irofactory.rgt.fluid.gravityListener
 import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.GlyphToy
 
 /**
  * FluidGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
- * Glyph Toy "fluid": simulacion SPH que reacciona al acelerometro y se
- * dibuja en tiempo real sobre la Glyph Matrix del Phone (3).
+ * Glyph Toy "fluid": agua simulada con FLIP (como la fluid pendant de
+ * mitxela) que cae hacia donde inclinas el telefono.
  *
  * Interaccion:
- *   - Touch-down (mantener presionado) → splash: empuja las particulas
- *     hacia afuera, como agitar el recipiente.
- *   - Long-press (evento "change") → reinicia la simulacion.
+ *   - Touch-down (mantener presionado) → agita el agua.
+ *   - Long-press (evento "change") → la reinicia en reposo.
  */
 class FluidGlyphToyService : AnimatedGlyphToyService("FluidGlyphToy") {
 
-    private val sim = FluidSimulation(cols = 25, rows = 25, circularBounds = true).also {
-        FluidParams().applyTo(it)
-    }
+    private val sim = FlipFluidSimulation()
     private val mask = GlyphFrames.circularMask()
-
     private val sensorManager by lazy { getSystemService(SensorManager::class.java) }
-    private val accelerometer by lazy { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
-
-    private val sensorListener = object : SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent) {
-            if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-            applyAccelerometerGravity(sim, event.values[0], event.values[1], event.values[2])
-        }
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    }
+    private val listener by lazy { gravityListener(sim) }
 
     override fun onToyStart() {
-        sensorManager.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
     }
 
     override fun onToyStop() {
-        sensorManager.unregisterListener(sensorListener)
+        sensorManager.unregisterListener(listener)
     }
 
     override fun onGlyphEvent(event: String) {

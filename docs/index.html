@@ -262,6 +262,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
     <div class="step-row"><div class="step-num">03</div><p><b>Matriz</b> · el servicio entrega el frame con <code>setMatrixFrame(int[])</code> en el hilo principal, a ~30 fps en fluid y pulse.</p></div>
     <div class="callout warn"><div class="callout-title">reposo</div><p>El sistema retira cualquier toy tras el ajuste <code>glyph_toy_timeout</code>. <code>setGlyphMatrixTimeout</code> del SDK no lo evita: el servicio del Glyph solo lo acepta de una lista fija de apps de Nothing.</p></div>
     <div class="callout"><div class="callout-title">bandas de pulse</div><p><code>AudioSpectrumSource</code> separa la FFT de <code>Visualizer</code> en sub, bajos, medios-bajos, voces, presencia y aire, cada una con su propio control de ganancia. <code>AudioBlobSimulation</code> las agrupa en tres blobs huecos que tienden a un polígono redondeado, porque la matriz solo distingue brillo, no color: hexágono (graves), diamante (voces) y triángulo (agudos). Giran lento y sus bordes respiran con lóbulos orgánicos. Las capas van en escala logarítmica: el tamaño de cada figura sale de su energía relativa a la familia más fuerte, así que la que más suena queda afuera, la que menos adentro, y solo se solapan cuando dos familias suenan casi igual. Con solo voces, graves y agudos quedan quietos en el centro y únicamente se mueve la figura de la voz.</p></div>
+    <div class="callout"><div class="callout-title">dureza</div><p><code>SpectrumAnalysis</code> estima qué tan armonioso o áspero es cada familia (no su calidad): planitud del espectro (tonal contra ruidoso), brusquedad (cuánto sube de un cuadro al siguiente) y aspereza entre picos con la curva de Plomp-Levelt. Un sonido suave redondea su figura; uno áspero o brusco afila sus vértices y los estira en puntas.</p></div>
 
     <div class="diagram">
       <div class="diagram-bar"><span>ariadne · grafo del repo</span><a href="architecture/rem-s-glyph-toys.html" target="_blank" rel="noopener">abrir en pestaña ↗</a></div>
@@ -624,18 +625,23 @@ createDitherBackground(document.getElementById('dither-arq'), { wave: '--violet'
   const makeRing = (sides, shapeAmp, orient, turn, lobes, amp, spin, drift, speed, thick, seed) => ({
     sides, shapeAmp, turn, lobes, amp, spin, drift, speed, thick, seed, rot: orient,
     phase: lobes.map((_, i) => seed + i * 1.7), level: lobes.map(() => 0),
-    energy: 0, size: REST_RADIUS, x: 0, y: 0, clock: seed, squeeze: 1,
+    energy: 0, harsh: 0, size: REST_RADIUS, x: 0, y: 0, clock: seed, squeeze: 1,
   });
   const low  = makeRing(6, 0.07, 0, 0.06,              [2, 3], [1.4, 1.2], [0.13, -0.21], 1.2, 0.35, 1.0, 0);
   const mid  = makeRing(4, 0.14, 0, -0.09,             [2, 5], [1.2, 1.0], [0.4, -0.55], 2.0, 0.5, 0.9, 2.1);
   const high = makeRing(3, 0.24, -Math.PI / 2, 0.13,   [5, 7], [0.6, 0.5], [0.8, -1.2], 1.5, 0.9, 0.85, 4.3);
   const rings = [low, mid, high];
-  const definition = (r) => r.shapeAmp * (0.6 + 0.4 * r.energy);
+  // Dureza: suave redondea, aspera afila y estira las puntas (SPIKE relativo al tamano)
+  const SPIKE = 0.45;
+  const definition = (r) => r.shapeAmp * (0.6 + 0.4 * r.energy) * (0.4 + 0.6 * r.harsh);
+  const spikeLen = (r) => SPIKE * r.harsh * Math.sqrt(r.harsh);
   const reach = (r) => 0.5 * r.lobes.reduce((s, _, i) => s + r.amp[i] * r.level[i], 0);
-  const outer = (r) => (r.size * (1 + definition(r)) + reach(r)) * r.squeeze;
+  const outer = (r) => (r.size * (1 + definition(r) + spikeLen(r)) + reach(r)) * r.squeeze;
   const inner = (r) => Math.max(0.5, (r.size * (1 - definition(r)) - reach(r)) * r.squeeze);
   const radius = (r, th) => {
-    let v = r.size * (1 + definition(r) * Math.cos(r.sides * (th - r.rot)));
+    const wave = Math.cos(r.sides * (th - r.rot));
+    const spike = spikeLen(r) * Math.pow(0.5 + 0.5 * wave, 1 + 10 * r.harsh);
+    let v = r.size * (1 + definition(r) * wave + spike);
     r.lobes.forEach((k, i) => { v += r.amp[i] * r.level[i] * 0.5 * Math.cos(k * (th - r.phase[i])); });
     return Math.max(0.6, v * r.squeeze);
   };
@@ -652,8 +658,21 @@ createDitherBackground(document.getElementById('dither-arq'), { wave: '--violet'
     return [0.6 + 0.4 * kick, 0.7 + 0.3 * kick, 0.6, 0.5 + 0.4 * vox, 0.45, 0.3 + 0.3 * hats];
   }
 
+  // Dureza sintetica por familia (graves, medios, agudos) en el mismo ciclo
+  function syntheticHarsh(s) {
+    const seg = (s % 15) / 5 | 0;
+    if (seg === 0) return [0.6, 0.2, 0.75];      // bombo brusco, hi-hats ruidosos
+    if (seg === 1) return [0, 0.08, 0];          // voz sostenida: suave
+    return [0.45, 0.4, 0.55];
+  }
+  let harsh = [0, 0, 0];
+  const smoothHarsh = (target, dt) => harsh = harsh.map((v, i) =>
+    v + (target[i] - v) * (1 - Math.exp(-dt / (target[i] > v ? 0.03 : 0.6))));
+
   function step(dt, b) {
     time += dt;
+    const h = smoothHarsh(syntheticHarsh(time), dt);
+    low.harsh = h[0]; mid.harsh = h[1]; high.harsh = h[2];
     low.energy = 0.6 * b[1] + 0.4 * b[0];    low.level = [b[0], b[1]];
     mid.energy = 0.4 * b[2] + 0.6 * b[3];    mid.level = [b[2], b[3]];
     high.energy = 0.55 * b[4] + 0.45 * b[5]; high.level = [b[4], b[5]];

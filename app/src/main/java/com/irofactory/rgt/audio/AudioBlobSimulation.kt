@@ -8,6 +8,7 @@ import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * AudioBlobSimulation
@@ -26,6 +27,10 @@ import kotlin.math.sin
  * log(e / eMax). La que mas suena siempre queda afuera, la que menos adentro;
  * familias parecidas quedan con radios parecidos y se solapan, y una que casi
  * no suena colapsa al centro.
+ *
+ * Dureza (SpectrumAnalysis.harshness, armonia y no calidad): con sonido
+ * suave la figura se redondea; con sonido aspero o brusco sus vertices se
+ * afilan y se estiran en puntas cada vez mas delgadas.
  *
  * Las figuras giran lento, flotan con un resorte hacia el centro (cuanto
  * flotan depende de cuanto suenan) y sus bordes respiran con lobulos
@@ -48,6 +53,8 @@ class AudioBlobSimulation {
         const val CROSS_BLEND = 1.6f
         // Hueco visible entre contornos anidados, ademas del grosor de ambos
         const val CLEARANCE = 0.8f
+        // Largo maximo de las puntas con dureza total, relativo al tamano de la figura
+        const val SPIKE = 0.45f
     }
 
     /**
@@ -70,6 +77,8 @@ class AudioBlobSimulation {
         val phase = FloatArray(lobes.size) { seed + it * 1.7f }
         val lobeLevel = FloatArray(lobes.size)
         var energy = 0f
+        /** 0 = sonido suave (redondeada) .. 1 = aspero o brusco (puntas). */
+        var harshness = 0f
         var size = REST_RADIUS
         var rotation = orientation
         var x = 0f
@@ -78,14 +87,22 @@ class AudioBlobSimulation {
         /** Compresion para caber dentro de otra figura o de la matriz (1 = libre). */
         var squeeze = 1f
 
-        /** Que tan marcada esta la forma: mas definida entre mas suena. */
-        private val definition get() = shapeAmp * (0.6f + 0.4f * energy)
+        /** Que tan marcada esta la forma: mas definida entre mas suena; mas redonda si es suave. */
+        private val definition get() = shapeAmp * (0.6f + 0.4f * energy) * (0.4f + 0.6f * harshness)
+        /** Largo de las puntas: solo aparecen con dureza, y crecen mas rapido que ella. */
+        private val spikeLength get() = SPIKE * harshness * sqrt(harshness)
+        /** Que tan delgadas son las puntas: exponente del perfil del vertice. */
+        private val spikeSharpness get() = 1f + 10f * harshness
         private val lobeReach get() = 0.5f * lobes.indices.sumOf { (lobeAmp[it] * lobeLevel[it]).toDouble() }.toFloat()
-        val outer get() = (size * (1f + definition) + lobeReach) * squeeze
+        val outer get() = (size * (1f + definition + spikeLength) + lobeReach) * squeeze
         val inner get() = ((size * (1f - definition) - lobeReach) * squeeze).coerceAtLeast(0.5f)
 
         fun radius(theta: Float): Float {
-            var r = size * (1f + definition * cos(sides * (theta - rotation)))
+            val wave = cos(sides * (theta - rotation))
+            // Punta: el perfil 0..1 del vertice elevado a una potencia alta queda
+            // angosto, asi que solo la zona del vertice se estira
+            val spike = spikeLength * ((0.5f + 0.5f * wave).pow(spikeSharpness))
+            var r = size * (1f + definition * wave + spike)
             for (i in lobes.indices) r += lobeAmp[i] * lobeLevel[i] * 0.5f * cos(lobes[i] * (theta - phase[i]))
             return (r * squeeze).coerceAtLeast(0.6f)
         }
@@ -112,9 +129,16 @@ class AudioBlobSimulation {
     private var loudness = 0f
     private var time = 0f
 
-    fun step(dt: Float, bands: FloatArray, loud: Float) {
+    /**
+     * [bands] son las 6 bandas y [harshness] la dureza de graves, medios y
+     * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
+     */
+    fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray) {
         time += dt
         loudness = loud
+        low.harshness = harshness[0]
+        mid.harshness = harshness[1]
+        high.harshness = harshness[2]
 
         low.energy = 0.6f * bands[1] + 0.4f * bands[0]
         low.lobeLevel[0] = bands[0]; low.lobeLevel[1] = bands[1]

@@ -59,14 +59,14 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
 }
 
 /**
- * Pasa el acelerometro a la gravedad del agua. Los ejes van sin negar: la
- * Glyph Matrix esta en la espalda del telefono y al inclinarlo a la
- * izquierda el agua debe caer hacia ese lado (verificado en un Phone 3 real).
+ * Pasa el acelerometro a la gravedad del agua. El eje X va negado: con el
+ * FLIP, sin negarlo, inclinar a la izquierda mandaba el agua a la derecha
+ * (verificado en un Phone 3 real). El eje Y va tal cual.
  */
 internal fun gravityListener(sim: FlipFluidSimulation) = object : SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-        sim.setGravity(event.values[0], event.values[1])
+        sim.setGravity(-event.values[0], event.values[1])
     }
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }

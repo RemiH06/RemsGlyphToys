@@ -15,7 +15,7 @@ import android.util.Log
  */
 object GalleryImageProvider {
 
-    class Pick(val uri: Uri, val grid: Array<FloatArray>)
+    class Pick(val uri: Uri, val grid: Array<FloatArray>, val stats: GalleryBitmapRenderer.Stats)
 
     /**
      * Foto al azar de la seleccion, ya convertida a grilla 25x25. Evita
@@ -32,9 +32,9 @@ object GalleryImageProvider {
                 Log.w("GalleryImageProvider", "No se pudo leer $uri: ${e.message}")
                 null
             } ?: continue
-            val grid = GalleryBitmapRenderer.toGrid(source)
+            val (grid, stats) = GalleryBitmapRenderer.toGrid(source)
             source.recycle()
-            return Pick(uri, grid)
+            return Pick(uri, grid, stats)
         }
         return null
     }

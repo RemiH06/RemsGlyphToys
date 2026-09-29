@@ -25,9 +25,9 @@ import kotlinx.coroutines.withContext
 /**
  * AudioSphereGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
- * Glyph Toy "pulse": figura organica que respira con el audio de salida del
- * sistema, deformada por bandas (bajos, voces, agudos). Mientras el toy
- * esta seleccionado corre un loop propio a ~30fps.
+ * Glyph Toy "pulse": tres anillos que respiran con el audio de salida del
+ * sistema, uno por familia de frecuencias (graves, voces, agudos). Mientras
+ * el toy esta seleccionado corre un loop propio a ~30fps.
  *
  * Si el Visualizer no arranca (permiso RECORD_AUDIO aun no concedido), el
  * loop lo reintenta cada ~2s y mientras tanto muestra un anillo tenue.

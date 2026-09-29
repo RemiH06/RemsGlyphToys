@@ -82,7 +82,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             index = "03",
             name = "pulse",
             neon = sc.magenta,
-            description = "Una figura que respira con lo que se este reproduciendo, por bocina o audifonos: los bajos la inflan, las voces la deforman y los agudos la hacen titilar."
+            description = "Tres anillos anidados que respiran con lo que se este reproduciendo, por bocina o audifonos: uno por graves, voces y agudos. El que mas suena queda afuera, los callados se quedan quietos en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte."
         ) { AudioSphereMatrixView() }
 
         Text(

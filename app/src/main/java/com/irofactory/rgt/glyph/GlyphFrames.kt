@@ -1,5 +1,7 @@
 package com.irofactory.rgt.glyph
 
+import kotlin.math.pow
+
 /**
  * GlyphFrames
  * ───────────────────────────────────────────────────────────────────────────
@@ -31,8 +33,12 @@ object GlyphFrames {
         BooleanArray(SIZE) { c -> c >= start && c < start + ROW_SPANS[r] }
     }
 
-    /** Grilla de brillo 0f..1f → frame. Las celdas fuera de [mask] quedan apagadas. */
-    fun fromGrid(grid: Array<FloatArray>, mask: Array<BooleanArray>): IntArray {
+    /**
+     * Grilla de brillo 0f..1f → frame. Las celdas fuera de [mask] quedan
+     * apagadas. [gamma] > 1 pasa de brillo percibido a PWM lineal de los
+     * LEDs (fotos); los efectos sinteticos se dejan en 1.
+     */
+    fun fromGrid(grid: Array<FloatArray>, mask: Array<BooleanArray>, gamma: Float = 1f): IntArray {
         val frame = IntArray(SIZE * SIZE)
         for (r in 0 until minOf(SIZE, grid.size)) {
             val row = grid[r]
@@ -40,7 +46,8 @@ object GlyphFrames {
                 if (!mask[r][c]) continue
                 val b = row[c]
                 if (b.isNaN() || b <= 0f) continue
-                frame[r * SIZE + c] = (b.coerceAtMost(1f) * MAX_BRIGHTNESS).toInt()
+                val linear = if (gamma == 1f) b.coerceAtMost(1f) else b.coerceAtMost(1f).pow(gamma)
+                frame[r * SIZE + c] = (linear * MAX_BRIGHTNESS).toInt()
             }
         }
         return frame

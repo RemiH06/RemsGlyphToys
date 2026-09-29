@@ -62,6 +62,11 @@ Three toys ship today: **fluid**, water simulated with FLIP like [mitxela's flui
 
 5. Open the Glyph Toy settings (long-press the Glyph Button, or **Settings → Glyph Interface → Glyph Toys**), enable **Fluid**, **Gallery** and **Pulse**, and cycle to them with a short press.
 
+6. Optional: toys go dark after 30 s by default. Raise **Timeout duration** in the Glyph Toys settings (up to 30 minutes), or go beyond with adb; the SDK's `setGlyphMatrixTimeout` only works for Nothing's own apps:
+   ```bash
+   adb shell settings put system glyph_toy_timeout 3600000
+   ```
+
 To regenerate the architecture diagram:
 ```bash
 ariadne generate
@@ -71,12 +76,11 @@ ariadne generate
 
 - **fluid**: FLIP water (particles plus a pressure grid, after Matthias Muller's [Ten Minute Physics](https://matthias-research.github.io/pages/tenMinutePhysics/) tutorial, the same method as [mitxela's fluid pendant](https://mitxela.com/projects/fluid-pendant)) in a circular bowl the size of the matrix; each LED lights by how many particles fall in it; tilt to pour, hold the Glyph Button to shake, long-press to reset
 - Dot-matrix logos for each toy and the project, generated from `tools/generate_glyph_icons.py` and exported to GlyphFactory (`design/glyphfactory_rgt.json`)
-- All toys declare Always-On (AOD) support, so they can stay lit instead of falling back to the default toy
+- All toys declare Always-On (AOD) support
 - **gallery**: photos chosen with the system Photo Picker, center-cropped and average-pooled to the matrix; long-press for another one, never the same twice in a row
 - **pulse**: FFT of the system output mix split into six bands (sub, bass, low-mids, vocals, presence, air), each with its own gain control, grouped into three hollow blobs that lean toward rounded polygons (hexagon, diamond, triangle), rotate slowly and breathe at their edges; layer sizes follow a log scale of each group relative to the loudest, so the loudest is always outside and the quietest inside, overlapping only when two groups are nearly equal; works regardless of audio route
 - **gallery** processing tuned for LEDs: auto-levels, 3x3 unsharp mask and 2.2 gamma on output
 - Previews match the physical matrix: the real 489-LED layout of the Nothing Phone (3), square LEDs, faint 25x25 grid
-- Animated toys disable the Glyph Matrix timeout so the system does not fall back to the default toy mid-animation
 - Toys without content or permission show a dim ring instead of going dark, to tell "nothing to show" apart from "not running"
 - In-app live previews that reuse the exact same engines as the toys
 - sherry_theme UI: JetBrains Mono and VT323, neon accents with glow in dark mode, CRT scanlines

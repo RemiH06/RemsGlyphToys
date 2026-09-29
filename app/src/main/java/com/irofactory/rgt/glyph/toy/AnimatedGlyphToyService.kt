@@ -30,18 +30,19 @@ import kotlinx.coroutines.withContext
  *
  *   - enlazar y registrar la Glyph Matrix, y soltarla al desenlazar;
  *   - un loop a ~30fps que pide [nextFrame] y lo entrega en el hilo principal;
- *   - mantener el toy en pantalla: desactiva el timeout de la matriz al
- *     conectar y lo vuelve a desactivar cada [KEEP_AWAKE_SECONDS] por si el
- *     sistema lo restablece;
  *   - que ningun error de un frame tumbe el proceso (eso haria que el sistema
  *     regrese al toy por default): se registra y el loop sigue;
  *   - registrar en logcat cuanto vivio el toy y por que termino.
+ *
+ * Reposo: el sistema retira cualquier toy tras el ajuste glyph_toy_timeout
+ * (Ajustes de Glyph Toys, "Duracion del timeout"). setGlyphMatrixTimeout del
+ * SDK no sirve para evitarlo: el servicio solo lo acepta de una lista fija
+ * de apps de Nothing e ignora al resto.
  */
 abstract class AnimatedGlyphToyService(private val tag: String) : Service() {
 
     private companion object {
         const val FRAME_SECONDS = 0.033f
-        const val KEEP_AWAKE_SECONDS = 10f
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -81,7 +82,6 @@ abstract class AnimatedGlyphToyService(private val tag: String) : Service() {
                 Log.e(tag, "Error al registrar: ${e.message}")
             }
             Log.i(tag, "Glyph Matrix conectada, registrada=$registered")
-            keepAwake()
             startLoop()
         }
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -112,18 +112,9 @@ abstract class AnimatedGlyphToyService(private val tag: String) : Service() {
 
     private fun aliveSeconds() = (SystemClock.elapsedRealtime() - boundAt) / 1000
 
-    private fun keepAwake() {
-        try {
-            glyphMatrixManager?.setGlyphMatrixTimeout(false)
-        } catch (e: Exception) {
-            Log.w(tag, "No se pudo desactivar el timeout: ${e.message}")
-        }
-    }
-
     private fun startLoop() {
         loopJob?.cancel()
         loopJob = scope.launch {
-            var sinceKeepAwake = 0f
             while (isActive) {
                 if (registered) {
                     val frame = try {
@@ -132,12 +123,7 @@ abstract class AnimatedGlyphToyService(private val tag: String) : Service() {
                         Log.e(tag, "Error calculando el frame, se omite", e)
                         null
                     }
-                    sinceKeepAwake += FRAME_SECONDS
-                    val refresh = sinceKeepAwake >= KEEP_AWAKE_SECONDS
-                    if (refresh) sinceKeepAwake = 0f
-
                     withContext(Dispatchers.Main) {
-                        if (refresh) keepAwake()
                         if (frame != null) {
                             try {
                                 glyphMatrixManager?.setMatrixFrame(frame)

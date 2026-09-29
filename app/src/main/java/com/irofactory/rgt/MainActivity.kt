@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.irofactory.rgt.audio.AudioSphereMatrixView
@@ -97,17 +100,24 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun Header() {
     val sc = sherryColors
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = "REM'S GLYPH TOYS",
-            style = MaterialTheme.typography.headlineLarge,
-            color = sc.text
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Image(
+            painter = painterResource(R.drawable.ic_app_logo),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
         )
-        Text(
-            text = "glyph matrix 25x25 · nothing phone (3)",
-            style = MaterialTheme.typography.bodySmall,
-            color = sc.text2
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "REM'S GLYPH TOYS",
+                style = MaterialTheme.typography.headlineLarge,
+                color = sc.text
+            )
+            Text(
+                text = "glyph matrix 25x25 · nothing phone (3)",
+                style = MaterialTheme.typography.bodySmall,
+                color = sc.text2
+            )
+        }
     }
 }
 

@@ -32,7 +32,7 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
     val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
 
     DisposableEffect(Unit) {
-        val listener = gravityListener(sim)
+        val listener = gravityListener(sim, viewedFromBack = false)
         sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
         onDispose { sensorManager.unregisterListener(listener) }
     }
@@ -59,14 +59,16 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
 }
 
 /**
- * Pasa el acelerometro a la gravedad del agua. El eje X va negado: con el
- * FLIP, sin negarlo, inclinar a la izquierda mandaba el agua a la derecha
- * (verificado en un Phone 3 real). El eje Y va tal cual.
+ * Pasa el acelerometro a la gravedad del agua. La pantalla se ve de frente y
+ * la Glyph Matrix por detras, asi que su izquierda y derecha estan
+ * invertidas entre si: la vista previa niega el eje X y la matriz no
+ * (ambos verificados en un Phone 3 real). El eje Y va igual en los dos.
  */
-internal fun gravityListener(sim: FlipFluidSimulation) = object : SensorEventListener {
+internal fun gravityListener(sim: FlipFluidSimulation, viewedFromBack: Boolean) = object : SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-        sim.setGravity(-event.values[0], event.values[1])
+        val x = if (viewedFromBack) event.values[0] else -event.values[0]
+        sim.setGravity(x, event.values[1])
     }
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }

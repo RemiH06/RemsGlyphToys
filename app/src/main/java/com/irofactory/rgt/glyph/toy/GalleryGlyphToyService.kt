@@ -3,7 +3,6 @@ package com.irofactory.rgt.glyph.toy
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
-import android.net.Uri
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -27,13 +26,14 @@ import kotlinx.coroutines.withContext
  * GalleryGlyphToyService
  * ───────────────────────────────────────────────────────────────────────────
  * Glyph Toy que muestra una de las fotos elegidas en la app (Photo Picker),
- * reducida a la Glyph Matrix 25x25 por average pooling.
+ * reducida a la Glyph Matrix 25x25 por average pooling, o uno de "Mis
+ * glifos" dibujados en la app.
  *
  * Interaccion:
- *   - Al seleccionar el toy → muestra una foto al azar de la seleccion.
- *   - Long-press (evento "change") → cambia a otra, sin repetir la actual.
+ *   - Al seleccionar el toy → muestra una foto o glifo al azar.
+ *   - Long-press (evento "change") → cambia a otro, sin repetir el actual.
  *
- * Sin fotos elegidas muestra un anillo tenue, para distinguir "no hay nada
+ * Sin fotos ni glifos muestra un anillo tenue, para distinguir "no hay nada
  * que mostrar" de "el toy no corre".
  */
 class GalleryGlyphToyService : Service() {
@@ -44,7 +44,7 @@ class GalleryGlyphToyService : Service() {
 
     private var glyphMatrixManager: GlyphMatrixManager? = null
     private val mask = GlyphFrames.circularMask()
-    @Volatile private var current: Uri? = null
+    @Volatile private var current: String? = null
     @Volatile private var lastFrame: IntArray? = null
 
     private val handler = object : Handler(Looper.getMainLooper()) {
@@ -89,13 +89,13 @@ class GalleryGlyphToyService : Service() {
         loadJob?.cancel()
         loadJob = scope.launch {
             val pick = GalleryImageProvider.randomPick(applicationContext, avoid = current)
-            if (pick == null) {
-                Log.w(tag, "Sin fotos elegidas: se eligen en la app")
-            } else {
-                val s = pick.stats
-                Log.i(tag, "Foto ${pick.uri}: media=%.2f niveles=[%.2f, %.2f]".format(s.mean, s.low, s.high))
+            val s = pick?.stats
+            when {
+                pick == null -> Log.w(tag, "Sin fotos ni glifos: se eligen y dibujan en la app")
+                s == null -> Log.i(tag, "Glifo ${pick.key}")
+                else -> Log.i(tag, "Foto ${pick.key}: media=%.2f niveles=[%.2f, %.2f]".format(s.mean, s.low, s.high))
             }
-            current = pick?.uri ?: current
+            current = pick?.key ?: current
             val frame = pick?.let { GlyphFrames.fromGrid(it.grid, mask, GalleryBitmapRenderer.LED_GAMMA) }
                 ?: GlyphFrames.idleRing(mask)
             lastFrame = frame

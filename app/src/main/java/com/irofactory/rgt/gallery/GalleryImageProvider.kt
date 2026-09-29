@@ -5,38 +5,54 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import com.irofactory.rgt.glyphs.MyGlyphs
 
 /**
  * GalleryImageProvider
  * ───────────────────────────────────────────────────────────────────────────
- * Elige al azar una de las fotos de [GallerySelection] y la decodifica ya
- * reducida (evita cargar el bitmap a resolucion completa solo para
- * terminar promediandolo a 25x25).
+ * Elige al azar que mostrar en el toy gallery: una de las fotos de
+ * [GallerySelection] o uno de [MyGlyphs], todos con la misma probabilidad.
+ * Las fotos se decodifican ya reducidas (evita cargar el bitmap a
+ * resolucion completa solo para terminar promediandolo a 25x25).
  */
 object GalleryImageProvider {
 
-    class Pick(val uri: Uri, val grid: Array<FloatArray>, val stats: GalleryBitmapRenderer.Stats)
+    /** [key] identifica lo elegido para no repetirlo; [stats] solo existe en fotos. */
+    class Pick(val key: String, val grid: Array<FloatArray>, val stats: GalleryBitmapRenderer.Stats?)
+
+    /** Fotos y glifos que puede mostrar el toy. */
+    fun count(context: Context) = GallerySelection.load(context).size + MyGlyphs.load(context).size
 
     /**
-     * Foto al azar de la seleccion, ya convertida a grilla 25x25. Evita
-     * repetir [avoid] si hay mas de una. Salta las que ya no se pueden leer
-     * (borradas del telefono). Null si la seleccion esta vacia.
+     * Foto o glifo al azar, ya como grilla 25x25 de brillo perceptual. Evita
+     * repetir [avoid] si hay mas de uno. Salta las fotos que ya no se pueden
+     * leer (borradas del telefono). Null si no hay nada.
      */
-    fun randomPick(context: Context, avoid: Uri? = null): Pick? {
-        val candidates = GallerySelection.load(context).shuffled()
-            .sortedBy { if (it == avoid) 1 else 0 }
-        for (uri in candidates) {
-            val source = try {
-                loadDownsampled(context, uri)
-            } catch (e: Exception) {
-                Log.w("GalleryImageProvider", "No se pudo leer $uri: ${e.message}")
-                null
-            } ?: continue
-            val (grid, stats) = GalleryBitmapRenderer.toGrid(source)
-            source.recycle()
-            return Pick(uri, grid, stats)
+    fun randomPick(context: Context, avoid: String? = null): Pick? {
+        val photos = GallerySelection.load(context).map { uri ->
+            uri.toString() to { photoGrid(context, uri) }
+        }
+        val glyphs = MyGlyphs.load(context).map { glyph ->
+            "glyph:${glyph.id}" to { glyph.toGrid() to null }
+        }
+        val candidates = (photos + glyphs).shuffled().sortedBy { if (it.first == avoid) 1 else 0 }
+        for ((key, render) in candidates) {
+            val (grid, stats) = render() ?: continue
+            return Pick(key, grid, stats)
         }
         return null
+    }
+
+    private fun photoGrid(context: Context, uri: Uri): Pair<Array<FloatArray>, GalleryBitmapRenderer.Stats>? {
+        val source = try {
+            loadDownsampled(context, uri)
+        } catch (e: Exception) {
+            Log.w("GalleryImageProvider", "No se pudo leer $uri: ${e.message}")
+            null
+        } ?: return null
+        val result = GalleryBitmapRenderer.toGrid(source)
+        source.recycle()
+        return result
     }
 
     /** Decodifica el URI ya submuestreado a ~[targetSize]px de lado. */

@@ -68,7 +68,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             index = "01",
             name = "fluid",
             neon = sc.cyan,
-            description = "Simulacion SPH que cae hacia donde inclines el telefono. Toca para salpicar; en la matriz fisica manten presionado el boton Glyph. Pulsacion larga reinicia."
+            description = "Agua simulada con FLIP, como la fluid pendant de mitxela: cae hacia donde inclines el telefono. Toca para agitarla; en la matriz fisica manten presionado el boton Glyph. Pulsacion larga reinicia."
         ) { FluidMatrixView() }
 
         ToySection(

@@ -1,9 +1,9 @@
 <resources>
     <string name="app_name">Rem\'s Glyph Toys</string>
     <string name="toy_name_fluid">Fluid</string>
-    <string name="toy_summary_fluid">Simulacion de fluidos SPH reactiva al acelerometro</string>
+    <string name="toy_summary_fluid">Agua que cae hacia donde inclinas el telefono</string>
     <string name="toy_name_gallery">Gallery</string>
-    <string name="toy_summary_gallery">Foto aleatoria de tu galeria. Manten presionado para cambiarla</string>
+    <string name="toy_summary_gallery">Tus fotos elegidas en la matriz. Manten presionado para cambiarla</string>
     <string name="toy_name_pulse">Pulse</string>
-    <string name="toy_summary_pulse">Esfera que reacciona al audio que se este reproduciendo</string>
+    <string name="toy_summary_pulse">Tres figuras que respiran con el audio que se este reproduciendo</string>
 </resources>

@@ -66,7 +66,9 @@ abstract class AnimatedGlyphToyService(private val tag: String) : Service() {
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             if (msg.what != GlyphToy.MSG_GLYPH_TOY) { super.handleMessage(msg); return }
-            msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA)?.let(::onGlyphEvent)
+            val event = msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA) ?: return
+            // Como toy de AOD el sistema manda EVENT_AOD cada minuto; el loop ya sigue dibujando.
+            if (event == GlyphToy.EVENT_AOD) Log.d(tag, "EVENT_AOD tras ${aliveSeconds()}s") else onGlyphEvent(event)
         }
     }
     private val messenger = Messenger(handler)

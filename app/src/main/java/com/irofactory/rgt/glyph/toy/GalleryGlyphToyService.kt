@@ -45,12 +45,15 @@ class GalleryGlyphToyService : Service() {
     private var glyphMatrixManager: GlyphMatrixManager? = null
     private val mask = GlyphFrames.circularMask()
     @Volatile private var current: Uri? = null
+    @Volatile private var lastFrame: IntArray? = null
 
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
             if (msg.what != GlyphToy.MSG_GLYPH_TOY) { super.handleMessage(msg); return }
-            if (msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA) == GlyphToy.EVENT_CHANGE) {
-                showRandomPhoto()
+            when (msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA)) {
+                GlyphToy.EVENT_CHANGE -> showRandomPhoto()
+                // Como toy de AOD el sistema avisa cada minuto: se repinta la misma foto
+                GlyphToy.EVENT_AOD -> lastFrame?.let(::draw)
             }
         }
     }
@@ -95,14 +98,16 @@ class GalleryGlyphToyService : Service() {
             current = pick?.uri ?: current
             val frame = pick?.let { GlyphFrames.fromGrid(it.grid, mask, GalleryBitmapRenderer.LED_GAMMA) }
                 ?: GlyphFrames.idleRing(mask)
+            lastFrame = frame
+            withContext(Dispatchers.Main) { draw(frame) }
+        }
+    }
 
-            withContext(Dispatchers.Main) {
-                try {
-                    glyphMatrixManager?.setMatrixFrame(frame)
-                } catch (e: GlyphException) {
-                    Log.e(tag, "Error al dibujar: ${e.message}")
-                }
-            }
+    private fun draw(frame: IntArray) {
+        try {
+            glyphMatrixManager?.setMatrixFrame(frame)
+        } catch (e: GlyphException) {
+            Log.e(tag, "Error al dibujar: ${e.message}")
         }
     }
 }

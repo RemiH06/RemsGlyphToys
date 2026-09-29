@@ -53,6 +53,9 @@
             <meta-data
                 android:name="com.nothing.glyph.toy.longpress"
                 android:value="1"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
+                android:value="1"/>
         </service>
 
         <!-- Glyph Toy: foto al azar de la galeria, reducida por average pooling -->
@@ -75,6 +78,9 @@
             <meta-data
                 android:name="com.nothing.glyph.toy.longpress"
                 android:value="1"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
+                android:value="1"/>
         </service>
 
         <!-- Glyph Toy: esfera que reacciona al audio de salida del sistema -->
@@ -94,6 +100,9 @@
             <meta-data
                 android:name="com.nothing.glyph.toy.summary"
                 android:resource="@string/toy_summary_pulse"/>
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
+                android:value="1"/>
         </service>
     </application>
 

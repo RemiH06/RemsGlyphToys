@@ -2,34 +2,37 @@ package com.irofactory.rgt.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ── Modo oscuro (dark) — paleta metro_theme ───────────────────────────────────
-val Background      = Color(0xFF080808)
-val Surface1        = Color(0xFF0D0D0D)
-val Surface2        = Color(0xFF111111)
-val Border          = Color(0xFF1C1C1C)
-val TextPrimary     = Color(0xFFF0F0F0)
-val TextSecondary   = Color(0xFF4A4A4A)
-val TextMuted       = Color(0xFF2E2E2E)
+// Paleta sherry_theme (iroFactory/sherry): CRT oscuro con neones.
+// Mismos valores que los tokens de body / body.light del demo HTML.
 
-val AccentGreen     = Color(0xFF00E5A0)
-val WarnAmber       = Color(0xFFF5A623)
-val DangerRed       = Color(0xFFFF4560)
-val InfoBlue        = Color(0xFF457BFF)
-val PurpleAccent    = Color(0xFF9B6DFF)
-val OrangeAccent    = Color(0xFFFF7A30)
+// ── Modo oscuro (default) ─────────────────────────────────────────────────────
+val DarkBg       = Color(0xFF080808)
+val DarkBg2      = Color(0xFF0E0E0E)
+val DarkBg3      = Color(0xFF141414)
+val DarkText     = Color(0xFFF0F0F0)
+val DarkText2    = Color(0xFF808080)
+val DarkText3    = Color(0xFF404040)
+val DarkBorder   = Color(0xFF1E1E1E)
+val DarkBorder2  = Color(0xFF2A2A2A)
 
-// ── Modo claro (light) — paleta metro_theme ───────────────────────────────────
-val LightBackground     = Color(0xFFF5F5F5)
-val LightSurface1       = Color(0xFFFFFFFF)
-val LightSurface2       = Color(0xFFEEEEEE)
-val LightBorder         = Color(0xFFDDDDDD)
-val LightTextPrimary    = Color(0xFF111111)
-val LightTextSecondary  = Color(0xFF888888)
-val LightTextMuted      = Color(0xFFBBBBBB)
+val DarkMagenta  = Color(0xFFFF2D78)
+val DarkCyan     = Color(0xFF00F5FF)
+val DarkLime     = Color(0xFFAAFF00)
+val DarkViolet   = Color(0xFFBF5FFF)
+val DarkElectric = Color(0xFFFFE600)
 
-val LightAccent         = Color(0xFF6B1A2A)
-val LightWarn           = Color(0xFFC4691A)
-val LightDanger         = Color(0xFF8B1A1A)
-val LightBlue           = Color(0xFF1A3A6B)
-val LightPurple         = Color(0xFF4A1A6B)
-val LightOrange         = Color(0xFFA84510)
+// ── Modo claro ────────────────────────────────────────────────────────────────
+val LightBg       = Color(0xFFF5F2EC)
+val LightBg2      = Color(0xFFEDEAD2)
+val LightBg3      = Color(0xFFE0DCCA)
+val LightText     = Color(0xFF0A0A0A)
+val LightText2    = Color(0xFF4A4A4A)
+val LightText3    = Color(0xFF9A9A9A)
+val LightBorder   = Color(0xFFCCCAB8)
+val LightBorder2  = Color(0xFFB8B6A4)
+
+val LightMagenta  = Color(0xFFCC0055)
+val LightCyan     = Color(0xFF007A80)
+val LightLime     = Color(0xFF557700)
+val LightViolet   = Color(0xFF6622AA)
+val LightElectric = Color(0xFF887700)

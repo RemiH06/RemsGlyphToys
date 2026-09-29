@@ -2,19 +2,19 @@ package com.irofactory.rgt.gallery
 
 import android.graphics.Bitmap
 import android.graphics.Color
-import kotlin.math.sqrt
+import com.irofactory.rgt.glyph.GlyphFrames
 
 /**
  * GalleryBitmapRenderer
  * ───────────────────────────────────────────────────────────────────────────
  * Reduce una foto a la Glyph Matrix 25x25 por average pooling: recorta al
- * centro un cuadrado, la basa a una resolucion intermedia y promedia cada
- * bloque a un pixel en escala de grises, respetando el area circular real
- * de la matriz.
+ * centro un cuadrado, lo baja a una resolucion intermedia y promedia la
+ * luminancia de cada bloque. Devuelve una grilla de brillo 0f..1f, con las
+ * celdas fuera del circulo real de la matriz en 0.
  */
 object GalleryBitmapRenderer {
 
-    fun toMatrix(source: Bitmap, size: Int = 25): Bitmap {
+    fun toGrid(source: Bitmap, size: Int = GlyphFrames.SIZE): Array<FloatArray> {
         val squareSize = minOf(source.width, source.height)
         val xOff = (source.width - squareSize) / 2
         val yOff = (source.height - squareSize) / 2
@@ -22,46 +22,25 @@ object GalleryBitmapRenderer {
 
         val poolSrcSize = size * 8
         val poolSrc = Bitmap.createScaledBitmap(square, poolSrcSize, poolSrcSize, true)
-        if (square !== source) square.recycle()
+        if (square !== source && square !== poolSrc) square.recycle()
 
-        val mask = circularMask(size)
-        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val mask = GlyphFrames.circularMask(size)
         val block = poolSrcSize / size
+        val pixels = IntArray(poolSrcSize * poolSrcSize)
+        poolSrc.getPixels(pixels, 0, poolSrcSize, 0, 0, poolSrcSize, poolSrcSize)
+        poolSrc.recycle()
 
-        for (r in 0 until size) {
-            for (c in 0 until size) {
-                if (!mask[r][c]) {
-                    out.setPixel(c, r, Color.TRANSPARENT)
-                    continue
-                }
+        return Array(size) { r ->
+            FloatArray(size) { c ->
+                if (!mask[r][c]) return@FloatArray 0f
                 var sum = 0L
-                var count = 0
-                val y0 = r * block
-                val x0 = c * block
-                for (y in y0 until y0 + block) {
-                    for (x in x0 until x0 + block) {
-                        val px = poolSrc.getPixel(x, y)
-                        sum += (Color.red(px) * 30 + Color.green(px) * 59 + Color.blue(px) * 11) / 100
-                        count++
+                for (y in r * block until (r + 1) * block) {
+                    for (x in c * block until (c + 1) * block) {
+                        val px = pixels[y * poolSrcSize + x]
+                        sum += (Color.red(px) * 299 + Color.green(px) * 587 + Color.blue(px) * 114) / 1000
                     }
                 }
-                val avg = (sum / count.coerceAtLeast(1)).toInt().coerceIn(0, 255)
-                out.setPixel(c, r, Color.argb(255, avg, avg, avg))
-            }
-        }
-
-        poolSrc.recycle()
-        return out
-    }
-
-    private fun circularMask(size: Int): Array<BooleanArray> {
-        val center = size / 2f
-        val radius = size / 2f - 0.5f
-        return Array(size) { r ->
-            BooleanArray(size) { c ->
-                val dx = c + 0.5f - center
-                val dy = r + 0.5f - center
-                sqrt(dx * dx + dy * dy) <= radius
+                (sum / (block * block).toFloat() / 255f).coerceIn(0f, 1f)
             }
         }
     }

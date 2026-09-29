@@ -9,102 +9,112 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
-// ── Esquemas ──────────────────────────────────────────────────────────────────
+// ── Esquemas Material ─────────────────────────────────────────────────────────
 private val DarkColorScheme = darkColorScheme(
-    primary          = AccentGreen,
-    onPrimary        = Background,
-    secondary        = PurpleAccent,
-    onSecondary      = Background,
-    tertiary         = InfoBlue,
-    background       = Background,
-    onBackground     = TextPrimary,
-    surface          = Surface1,
-    onSurface        = TextPrimary,
-    surfaceVariant   = Surface2,
-    onSurfaceVariant = TextSecondary,
-    outline          = Border,
-    error            = DangerRed,
-    onError          = Background,
+    primary          = DarkMagenta,
+    onPrimary        = DarkBg,
+    secondary        = DarkCyan,
+    onSecondary      = DarkBg,
+    tertiary         = DarkLime,
+    background       = DarkBg,
+    onBackground     = DarkText,
+    surface          = DarkBg2,
+    onSurface        = DarkText,
+    surfaceVariant   = DarkBg3,
+    onSurfaceVariant = DarkText2,
+    outline          = DarkBorder2,
+    outlineVariant   = DarkBorder,
+    error            = DarkMagenta,
+    onError          = DarkBg,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary          = LightAccent,
-    onPrimary        = LightBackground,
-    secondary        = LightPurple,
-    onSecondary      = LightBackground,
-    tertiary         = LightBlue,
-    background       = LightBackground,
-    onBackground     = LightTextPrimary,
-    surface          = LightSurface1,
-    onSurface        = LightTextPrimary,
-    surfaceVariant   = LightSurface2,
-    onSurfaceVariant = LightTextSecondary,
-    outline          = LightBorder,
-    error            = LightDanger,
-    onError          = LightBackground,
+    primary          = LightMagenta,
+    onPrimary        = LightBg,
+    secondary        = LightCyan,
+    onSecondary      = LightBg,
+    tertiary         = LightLime,
+    background       = LightBg,
+    onBackground     = LightText,
+    surface          = LightBg2,
+    onSurface        = LightText,
+    surfaceVariant   = LightBg3,
+    onSurfaceVariant = LightText2,
+    outline          = LightBorder2,
+    outlineVariant   = LightBorder,
+    error            = LightMagenta,
+    onError          = LightBg,
 )
 
-// ── CompositionLocal para colores semanticos extra (metro_theme) ─────────────
-data class MetroColors(
-    val background:    Color,
-    val surface1:      Color,
-    val surface2:      Color,
-    val border:        Color,
-    val textPrimary:   Color,
-    val textSecondary: Color,
-    val textMuted:     Color,
-    val accent:        Color,
-    val warn:          Color,
-    val danger:        Color,
-    val blue:          Color,
-    val purple:        Color,
-    val orange:        Color,
-    val isDark:        Boolean
+// ── Tokens semanticos sherry_theme ────────────────────────────────────────────
+data class SherryColors(
+    val bg:       Color,
+    val bg2:      Color,
+    val bg3:      Color,
+    val text:     Color,
+    val text2:    Color,
+    val text3:    Color,
+    val border:   Color,
+    val border2:  Color,
+    val magenta:  Color,
+    val cyan:     Color,
+    val lime:     Color,
+    val violet:   Color,
+    val electric: Color,
+    /** Los neones solo brillan en oscuro; en claro el HTML pone --glow-* en none. */
+    val glow:     Boolean,
+    val isDark:   Boolean
+) {
+    val accent: Color get() = magenta
+    val accent2: Color get() = cyan
+}
+
+val DarkSherryColors = SherryColors(
+    bg = DarkBg, bg2 = DarkBg2, bg3 = DarkBg3,
+    text = DarkText, text2 = DarkText2, text3 = DarkText3,
+    border = DarkBorder, border2 = DarkBorder2,
+    magenta = DarkMagenta, cyan = DarkCyan, lime = DarkLime,
+    violet = DarkViolet, electric = DarkElectric,
+    glow = true, isDark = true
 )
 
-val DarkMetroColors = MetroColors(
-    background    = Background,
-    surface1      = Surface1,
-    surface2      = Surface2,
-    border        = Border,
-    textPrimary   = TextPrimary,
-    textSecondary = TextSecondary,
-    textMuted     = TextMuted,
-    accent        = AccentGreen,
-    warn          = WarnAmber,
-    danger        = DangerRed,
-    blue          = InfoBlue,
-    purple        = PurpleAccent,
-    orange        = OrangeAccent,
-    isDark        = true
+val LightSherryColors = SherryColors(
+    bg = LightBg, bg2 = LightBg2, bg3 = LightBg3,
+    text = LightText, text2 = LightText2, text3 = LightText3,
+    border = LightBorder, border2 = LightBorder2,
+    magenta = LightMagenta, cyan = LightCyan, lime = LightLime,
+    violet = LightViolet, electric = LightElectric,
+    glow = false, isDark = false
 )
 
-val LightMetroColors = MetroColors(
-    background    = LightBackground,
-    surface1      = LightSurface1,
-    surface2      = LightSurface2,
-    border        = LightBorder,
-    textPrimary   = LightTextPrimary,
-    textSecondary = LightTextSecondary,
-    textMuted     = LightTextMuted,
-    accent        = LightAccent,
-    warn          = LightWarn,
-    danger        = LightDanger,
-    blue          = LightBlue,
-    purple        = LightPurple,
-    orange        = LightOrange,
-    isDark        = false
-)
+val LocalSherryColors = staticCompositionLocalOf { DarkSherryColors }
 
-val LocalMetroColors = staticCompositionLocalOf { DarkMetroColors }
+val sherryColors: SherryColors
+    @Composable get() = LocalSherryColors.current
 
-// Acceso facil desde cualquier composable
-val metroColors: MetroColors
-    @Composable get() = LocalMetroColors.current
+/**
+ * Scanlines CRT: franjas de 2dp cada 4dp, como el repeating-linear-gradient
+ * de body.light::before en el demo (en oscuro el HTML las deja opcionales).
+ */
+fun Modifier.crtScanlines(color: Color): Modifier = drawWithContent {
+    drawContent()
+    val period = 4.dp.toPx()
+    val line = 2.dp.toPx()
+    var y = line
+    while (y < size.height) {
+        drawRect(color = color, topLeft = Offset(0f, y), size = Size(size.width, line))
+        y += period
+    }
+}
 
 @Composable
 fun RemsGlyphToysTheme(
@@ -112,7 +122,7 @@ fun RemsGlyphToysTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-    val metro       = if (darkTheme) DarkMetroColors else LightMetroColors
+    val sherry      = if (darkTheme) DarkSherryColors else LightSherryColors
     val view        = LocalView.current
 
     if (!view.isInEditMode) {
@@ -123,7 +133,7 @@ fun RemsGlyphToysTheme(
         }
     }
 
-    CompositionLocalProvider(LocalMetroColors provides metro) {
+    CompositionLocalProvider(LocalSherryColors provides sherry) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography  = Typography,

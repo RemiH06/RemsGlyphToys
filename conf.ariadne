@@ -1,0 +1,80 @@
+# Ariadne · diagrama de arquitectura de Rem's Glyph Toys
+# Regenerar desde la raiz del repo:  ariadne generate
+
+[project]
+name = "Rem's Glyph Toys"
+path = "."
+description = "Glyph Toys para la Glyph Matrix 25x25 del Nothing Phone (3)"
+
+[output]
+formats = ["html"]
+dir = "./docs/architecture"
+
+# Paleta sherry_theme (iroFactory/sherry), modo oscuro
+[output.html]
+theme = "dark"
+background = "#080808"
+link_color = "#2A2A2A"
+text_color = "#F0F0F0"
+
+[output.html.colors]
+default   = "#00F5FF"
+directory = "#FFE600"
+file      = "#00F5FF"
+class     = "#FF2D78"
+object    = "#FFB3DE"
+attribute = "#D4AAFF"
+method    = "#AAFF00"
+library   = "#BF5FFF"
+import    = "#A8EFFF"
+test      = "#FFD4AA"
+config    = "#808080"
+docs      = "#D4AAFF"
+styles    = "#FFB3DE"
+markup    = "#AAFFD4"
+script    = "#FFD4AA"
+
+[output.html.icons]
+enabled = true
+set = "devicon"
+
+[filters]
+max_depth = 7
+hide_generated = true
+hide_extensions = [".lock", ".log", ".jar", ".aar", ".webp", ".ttf", ".bat"]
+hide_paths = [
+    "**/build/**",
+    "**/.gradle/**",
+    "**/.idea/**",
+    "**/.kotlin/**",
+    "**/.git/**",
+    "docs/**",
+    "gradle/wrapper/**",
+    "app/src/test/**",
+    "app/src/androidTest/**",
+    "app/src/main/res/mipmap-*/**",
+]
+
+[ignore]
+extra = ["local.properties", "gradlew", "app/libs/"]
+
+[languages]
+detect = "auto"
+
+# Cada toy apunta a su seccion de la documentacion (ruta relativa al HTML
+# que genera Ariadne en docs/architecture/).
+[[docs.pages]]
+node = "app/src/main/java/com/irofactory/rgt/glyph/toy/FluidGlyphToyService.kt"
+url = "../index.html#fluid"
+
+[[docs.pages]]
+node = "app/src/main/java/com/irofactory/rgt/glyph/toy/GalleryGlyphToyService.kt"
+url = "../index.html#gallery"
+
+[[docs.pages]]
+node = "app/src/main/java/com/irofactory/rgt/glyph/toy/AudioSphereGlyphToyService.kt"
+url = "../index.html#pulse"
+
+[[docs.pages]]
+node = "app/src/main/java/com/irofactory/rgt/glyph/GlyphFrames.kt"
+url = "../index.html#arquitectura"

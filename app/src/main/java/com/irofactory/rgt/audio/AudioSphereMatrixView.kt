@@ -1,12 +1,12 @@
 package com.irofactory.rgt.audio
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,31 +17,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.irofactory.rgt.ui.theme.metroColors
+import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
+import com.irofactory.rgt.ui.theme.sherryColors
 import kotlinx.coroutines.isActive
 
 /**
  * AudioSphereMatrixView
  * ───────────────────────────────────────────────────────────────────────────
- * Vista previa en pantalla de la esfera de audio, mismo lenguaje visual de
- * puntos que [com.irofactory.rgt.fluid.FluidMatrixView]. Usa su propia
- * instancia de [AudioLevelSource]; correr esta junto con el toy fisico al
- * mismo tiempo no choca, cada Visualizer lee la mezcla de forma independiente.
+ * Vista previa en pantalla de la esfera de audio. Aqui se pide RECORD_AUDIO:
+ * el toy corre en segundo plano y no puede mostrar el dialogo de permisos.
  */
 @Composable
 fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
-    val mc = metroColors
+    val context = LocalContext.current
+    val sc = sherryColors
 
     val sim = remember { AudioSphereSimulation(cols = 25, rows = 25) }
-    val audioSource = remember { AudioLevelSource() }
+    val audioSource = remember { AudioLevelSource(context.applicationContext) }
     val mask = remember { sim.circularMask() }
     var grid by remember { mutableStateOf(Array(25) { FloatArray(25) }) }
+    var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
 
-    DisposableEffect(Unit) {
-        audioSource.start()
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> hasPermission = granted }
+
+    DisposableEffect(hasPermission) {
+        if (hasPermission) audioSource.start()
         onDispose { audioSource.stop() }
     }
 
@@ -56,46 +61,23 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
         }
     }
 
-    val activeColor = mc.accent
-    val emptyColor  = mc.surface2
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth(0.72f)
-            .aspectRatio(1f),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(CircleShape)
-                .border(0.5.dp, mc.border, CircleShape)
-                .padding(4.dp)
-        ) {
-            val cols = 25
-            val rows = 25
-            val cellW = size.width / cols
-            val cellH = size.height / rows
-            val dotR = cellW * 0.38f
-
-            for (r in 0 until rows) {
-                for (c in 0 until cols) {
-                    if (!mask[r][c]) continue
-
-                    val brightness = grid[r][c]
-                    val cx = c * cellW + cellW / 2f
-                    val cy = r * cellH + cellH / 2f
-
-                    val dotColor = if (brightness > 0.01f) {
-                        activeColor.copy(alpha = brightness.coerceIn(0.05f, 1f))
-                    } else {
-                        emptyColor.copy(alpha = 0.4f)
-                    }
-
-                    drawCircle(color = dotColor, radius = dotR, center = Offset(cx, cy))
-                }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        GlyphMatrixCanvas(
+            grid    = grid,
+            mask    = mask,
+            neon    = sc.magenta,
+            onClick = if (hasPermission) null else {
+                { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
             }
+        )
+        if (!hasPermission) {
+            Text(
+                text = "Toca para dar permiso de audio",
+                style = MaterialTheme.typography.bodySmall,
+                color = sc.text2,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(48.dp)
+            )
         }
     }
 }

@@ -3,7 +3,6 @@ package com.irofactory.rgt.glyph.toy
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
-import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -17,13 +16,11 @@ import android.util.Log
 import com.irofactory.rgt.fluid.FluidParams
 import com.irofactory.rgt.fluid.FluidSimulation
 import com.irofactory.rgt.fluid.applyAccelerometerGravity
-import com.irofactory.rgt.glyph.GlyphDotRenderer
+import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
-import com.nothing.ketchum.GlyphMatrixFrame
 import com.nothing.ketchum.GlyphMatrixManager
-import com.nothing.ketchum.GlyphMatrixObject
 import com.nothing.ketchum.GlyphToy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * FluidGlyphToyService
@@ -90,6 +88,8 @@ class FluidGlyphToyService : Service() {
         override fun onServiceConnected(name: ComponentName?) {
             try {
                 registered = glyphMatrixManager?.register(Glyph.DEVICE_23112) ?: false
+                // Sin esto el sistema regresa al toy por default (reloj) a media partida.
+                glyphMatrixManager?.setGlyphMatrixTimeout(false)
             } catch (e: Exception) {
                 Log.e(tag, "Error al registrar: ${e.message}")
             }
@@ -126,26 +126,14 @@ class FluidGlyphToyService : Service() {
             while (isActive) {
                 if (registered) {
                     sim.step(dt = 0.033f)
-                    val bitmap = GlyphDotRenderer.render(
-                        grid      = sim.rasterize(),
-                        mask      = mask,
-                        sizePx    = 32,
-                        colorArgb = Color.WHITE
-                    )
-                    try {
-                        val frame = GlyphMatrixFrame.Builder()
-                            .addTop(
-                                GlyphMatrixObject.Builder()
-                                    .setImageSource(bitmap)
-                                    .setScale(100)
-                                    .setPosition(0, 0)
-                                    .setBrightness(255)
-                                    .build()
-                            )
-                            .build(applicationContext)
-                        glyphMatrixManager?.setMatrixFrame(frame.render())
-                    } catch (e: GlyphException) {
-                        Log.e(tag, "Error al dibujar: ${e.message}")
+                    val frame = GlyphFrames.fromGrid(sim.rasterize(), mask)
+                    // El ejemplo oficial de Nothing entrega cada frame en el hilo principal.
+                    withContext(Dispatchers.Main) {
+                        try {
+                            glyphMatrixManager?.setMatrixFrame(frame)
+                        } catch (e: GlyphException) {
+                            Log.e(tag, "Error al dibujar: ${e.message}")
+                        }
                     }
                 }
                 delay(33)

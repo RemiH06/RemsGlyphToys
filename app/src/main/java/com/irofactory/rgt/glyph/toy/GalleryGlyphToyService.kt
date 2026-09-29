@@ -1,30 +1,25 @@
 package com.irofactory.rgt.glyph.toy
 
-import android.Manifest
 import android.app.Service
 import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.util.Log
-import androidx.core.content.ContextCompat
-import com.irofactory.rgt.gallery.GalleryBitmapRenderer
 import com.irofactory.rgt.gallery.GalleryImageProvider
+import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
-import com.nothing.ketchum.GlyphMatrixFrame
 import com.nothing.ketchum.GlyphMatrixManager
-import com.nothing.ketchum.GlyphMatrixObject
 import com.nothing.ketchum.GlyphToy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * GalleryGlyphToyService
@@ -35,6 +30,9 @@ import kotlinx.coroutines.launch
  * Interaccion:
  *   - Al seleccionar el toy → carga y muestra una foto al azar.
  *   - Long-press (evento "change") → cambia a otra foto al azar.
+ *
+ * Sin permiso de fotos o con la galeria vacia muestra un anillo tenue, para
+ * distinguir "no hay nada que mostrar" de "el toy no corre".
  */
 class GalleryGlyphToyService : Service() {
 
@@ -43,6 +41,7 @@ class GalleryGlyphToyService : Service() {
     private var loadJob: Job? = null
 
     private var glyphMatrixManager: GlyphMatrixManager? = null
+    private val mask = GlyphFrames.circularMask()
 
     private val handler = object : Handler(Looper.getMainLooper()) {
         override fun handleMessage(msg: Message) {
@@ -81,45 +80,26 @@ class GalleryGlyphToyService : Service() {
     }
 
     private fun showRandomPhoto() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            Log.w(tag, "Sin permiso de galeria (READ_MEDIA_IMAGES)")
-            return
-        }
-
         loadJob?.cancel()
         loadJob = scope.launch {
-            try {
-                val uri = GalleryImageProvider.pickRandomUri(applicationContext) ?: run {
-                    Log.w(tag, "Galeria vacia")
-                    return@launch
-                }
-                val source = GalleryImageProvider.loadDownsampled(applicationContext, uri) ?: return@launch
-                val matrixBitmap = GalleryBitmapRenderer.toMatrix(source)
-                source.recycle()
-                render(matrixBitmap)
+            val grid = try {
+                GalleryImageProvider.randomGrid(applicationContext)
             } catch (e: Exception) {
                 Log.e(tag, "Error al cargar foto: ${e.message}")
+                null
             }
-        }
-    }
+            if (grid == null) {
+                Log.w(tag, "Sin foto (permiso=${GalleryImageProvider.hasPermission(applicationContext)})")
+            }
+            val frame = grid?.let { GlyphFrames.fromGrid(it, mask) } ?: GlyphFrames.idleRing(mask)
 
-    private fun render(bitmap: Bitmap) {
-        try {
-            val frame = GlyphMatrixFrame.Builder()
-                .addTop(
-                    GlyphMatrixObject.Builder()
-                        .setImageSource(bitmap)
-                        .setScale(100)
-                        .setPosition(0, 0)
-                        .setBrightness(255)
-                        .build()
-                )
-                .build(applicationContext)
-            glyphMatrixManager?.setMatrixFrame(frame.render())
-        } catch (e: GlyphException) {
-            Log.e(tag, "Error al dibujar: ${e.message}")
+            withContext(Dispatchers.Main) {
+                try {
+                    glyphMatrixManager?.setMatrixFrame(frame)
+                } catch (e: GlyphException) {
+                    Log.e(tag, "Error al dibujar: ${e.message}")
+                }
+            }
         }
     }
 }

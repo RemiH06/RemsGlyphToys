@@ -4,14 +4,6 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -20,13 +12,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import com.irofactory.rgt.ui.theme.metroColors
+import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
+import com.irofactory.rgt.ui.theme.sherryColors
 import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlinx.coroutines.isActive
@@ -45,7 +34,7 @@ fun FluidMatrixView(
     modifier:  Modifier    = Modifier
 ) {
     val context = LocalContext.current
-    val mc      = metroColors
+    val sc      = sherryColors
 
     // ── Simulacion ────────────────────────────────────────────────────────────
     val sim = remember {
@@ -85,50 +74,13 @@ fun FluidMatrixView(
         }
     }
 
-    val fluidColor  = mc.accent
-    val emptyColor  = mc.surface2
-    val borderColor = mc.border
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth(0.72f)
-            .aspectRatio(1f),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(CircleShape)
-                .border(0.5.dp, borderColor, CircleShape)
-                .clickable { sim.splash() }
-                .padding(4.dp)
-        ) {
-            val cols  = 25
-            val rows  = 25
-            val cellW = size.width / cols
-            val cellH = size.height / rows
-            val dotR  = cellW * 0.38f
-
-            for (r in 0 until rows) {
-                for (c in 0 until cols) {
-                    if (!mask[r][c]) continue
-
-                    val brightness = grid[r][c]
-                    val cx = c * cellW + cellW / 2f
-                    val cy = r * cellH + cellH / 2f
-
-                    val dotColor = if (brightness > 0.01f) {
-                        fluidColor.copy(alpha = brightness.coerceIn(0.05f, 1f))
-                    } else {
-                        emptyColor.copy(alpha = 0.4f)
-                    }
-
-                    drawCircle(color = dotColor, radius = dotR, center = Offset(cx, cy))
-                }
-            }
-        }
-    }
+    GlyphMatrixCanvas(
+        grid     = grid,
+        mask     = mask,
+        neon     = sc.cyan,
+        modifier = modifier,
+        onClick  = { sim.splash() }
+    )
 }
 
 /**

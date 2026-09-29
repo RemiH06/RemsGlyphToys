@@ -99,8 +99,22 @@ class AudioSpectrumSource(private val context: Context) {
         loudness = 0f
     }
 
-    /** Lee un frame nuevo y actualiza [bands] y [loudness]. */
+    /**
+     * Lee un frame nuevo y actualiza [bands] y [loudness]. Si el efecto de
+     * audio se invalida (cambio de cancion, de app o de salida), Visualizer
+     * lanza IllegalStateException: se suelta y [isActive] queda en false para
+     * que quien lo use lo vuelva a arrancar, en vez de tumbar el proceso.
+     */
     fun update(dt: Float) {
+        try {
+            read(dt)
+        } catch (e: RuntimeException) {
+            Log.w(tag, "Visualizer invalido, se reinicia: ${e.message}")
+            stop()
+        }
+    }
+
+    private fun read(dt: Float) {
         val v = visualizer ?: return decay(dt)
         val buf = fft ?: return decay(dt)
         if (v.getFft(buf) != Visualizer.SUCCESS || binHz <= 0f) return decay(dt)

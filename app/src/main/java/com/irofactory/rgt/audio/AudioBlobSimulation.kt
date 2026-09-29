@@ -31,6 +31,8 @@ import kotlin.math.sin
 class AudioBlobSimulation {
 
     private companion object {
+        const val PI_F = 3.1415927f
+        const val TWO_PI = 6.2831855f
         // Radios mas parecidos que esto se pueden cruzar (familias "empatadas");
         // a partir de CROSS + CROSS_BLEND se anidan por completo, con transicion suave.
         const val CROSS = 0.8f
@@ -39,7 +41,17 @@ class AudioBlobSimulation {
         const val CLEARANCE = 0.8f
     }
 
+    /**
+     * Un anillo que tiende a un poligono regular de [sides] lados: entre mas
+     * suena su familia, mas afilado; callado se redondea. [orientation] fija
+     * hacia donde apunta (en radianes, 0 = derecha, y crece hacia abajo) y
+     * solo se balancea [wobble] radianes, para que la forma no pierda
+     * identidad girando.
+     */
     private class Ring(
+        val sides: Int,
+        val orientation: Float,
+        val wobble: Float,
         val minRadius: Float,
         val maxRadius: Float,
         val lobes: IntArray,
@@ -56,17 +68,29 @@ class AudioBlobSimulation {
         var x = 0f
         var y = 0f
         var clock = seed
+        var rotation = orientation
         /** Compresion para caber dentro de un anillo mas grande (1 = tamano libre). */
         var squeeze = 1f
 
+        private val segment = TWO_PI / sides
+        private val apothem = cos(PI_F / sides)   // radio al centro de un lado, con vertices a 1
+
+        /** 0 = circulo, 1 = poligono con lados rectos. */
+        val sharpness get() = 0.7f + 0.3f * energy
+
+        /** Radio a los vertices. */
         val base get() = minRadius + (maxRadius - minRadius) * energy
-        private val lobeReach get() = 0.5f * lobes.indices.sumOf { (lobeAmp[it] * lobeLevel[it]).toDouble() }.toFloat()
+        private val lobeReach get() = 0.25f * lobes.indices.sumOf { (lobeAmp[it] * lobeLevel[it]).toDouble() }.toFloat()
         val outer get() = (base + lobeReach) * squeeze
-        val inner get() = ((base - lobeReach) * squeeze).coerceAtLeast(0.5f)
+        val inner get() = ((base * (1f + (apothem - 1f) * sharpness) - lobeReach) * squeeze).coerceAtLeast(0.5f)
 
         fun radius(theta: Float): Float {
-            var r = base
-            for (i in lobes.indices) r += lobeAmp[i] * lobeLevel[i] * (0.5f * cos(lobes[i] * (theta - phase[i])))
+            // Poligono regular en polares: apotema / cos(distancia angular al centro del lado)
+            val a = ((theta - rotation) % segment + segment) % segment
+            val polygon = apothem / cos(a - segment / 2f)
+            var r = base * (1f + (polygon - 1f) * sharpness)
+            // Lobulos organicos a la mitad de fuerza para que la forma se siga leyendo
+            for (i in lobes.indices) r += 0.5f * lobeAmp[i] * lobeLevel[i] * (0.5f * cos(lobes[i] * (theta - phase[i])))
             return (r * squeeze).coerceAtLeast(0.6f)
         }
     }
@@ -75,12 +99,18 @@ class AudioBlobSimulation {
     private val center = n / 2f
     private val edge = GlyphFrames.LED_RADIUS - 0.2f
 
-    private val low = Ring(1.2f, 12.2f, intArrayOf(1, 2), floatArrayOf(1.4f, 1.8f), floatArrayOf(0.13f, -0.21f),
-        drift = 1.2f, driftSpeed = 0.35f, thickness = 1.0f, seed = 0f)
-    private val mid = Ring(1.2f, 10.5f, intArrayOf(3, 4), floatArrayOf(1.2f, 1.6f), floatArrayOf(0.4f, -0.55f),
-        drift = 2.0f, driftSpeed = 0.5f, thickness = 0.9f, seed = 2.1f)
-    private val high = Ring(1.0f, 9.0f, intArrayOf(5, 7), floatArrayOf(0.8f, 0.7f), floatArrayOf(0.8f, -1.2f),
-        drift = 1.5f, driftSpeed = 0.9f, thickness = 0.85f, seed = 4.3f)
+    // Graves: hexagono con lado plano arriba (vertice a la derecha)
+    private val low = Ring(sides = 6, orientation = 0f, wobble = 0.12f,
+        minRadius = 1.2f, maxRadius = 12.2f, lobes = intArrayOf(1, 2), lobeAmp = floatArrayOf(1.4f, 1.8f),
+        spin = floatArrayOf(0.13f, -0.21f), drift = 1.2f, driftSpeed = 0.35f, thickness = 1.0f, seed = 0f)
+    // Voces: diamante, vertices sobre los ejes
+    private val mid = Ring(sides = 4, orientation = 0f, wobble = 0.18f,
+        minRadius = 1.2f, maxRadius = 10.5f, lobes = intArrayOf(3, 4), lobeAmp = floatArrayOf(1.2f, 1.6f),
+        spin = floatArrayOf(0.4f, -0.55f), drift = 2.0f, driftSpeed = 0.5f, thickness = 0.9f, seed = 2.1f)
+    // Agudos: triangulo apuntando hacia arriba (y crece hacia abajo, arriba es -90 grados)
+    private val high = Ring(sides = 3, orientation = -PI_F / 2f, wobble = 0.25f,
+        minRadius = 1.0f, maxRadius = 9.0f, lobes = intArrayOf(5, 7), lobeAmp = floatArrayOf(0.45f, 0.35f),
+        spin = floatArrayOf(0.8f, -1.2f), drift = 1.5f, driftSpeed = 0.9f, thickness = 0.85f, seed = 4.3f)
     private val rings = arrayOf(low, mid, high)
 
     private var loudness = 0f
@@ -103,6 +133,7 @@ class AudioBlobSimulation {
 
             // Flotar: deriva lenta proporcional a su energia, resorte al centro
             ring.clock += dt * ring.driftSpeed * (0.3f + ring.energy)
+            ring.rotation = ring.orientation + ring.wobble * ring.energy * sin(ring.clock * 0.8f + ring.seed)
             val amp = ring.drift * ring.energy
             val tx = amp * sin(ring.clock + ring.seed)
             val ty = amp * sin(ring.clock * 1.3f + 2f * ring.seed) * cos(ring.clock * 0.7f)
@@ -110,8 +141,8 @@ class AudioBlobSimulation {
             ring.y += (ty - ring.y) * follow
         }
         // Temblor de los agudos
-        high.x += 0.25f * high.energy * sin(time * 11f)
-        high.y += 0.25f * high.energy * cos(time * 13f)
+        high.x += 0.12f * high.energy * sin(time * 11f)
+        high.y += 0.12f * high.energy * cos(time * 13f)
 
         // Anidado, de afuera hacia adentro: el mas chico queda dentro del mas
         // grande con un hueco visible (comprimiendose si no cabe) salvo que sus

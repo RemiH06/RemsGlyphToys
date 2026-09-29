@@ -26,7 +26,7 @@
 
 **Rem's Glyph Toys** is a collection of custom Glyph Toys for the 25x25 Glyph Matrix on the back of the Nothing Phone (3). Each toy is selected from the Glyph Button carousel and draws directly on the physical matrix; the companion app only shows live previews and requests the permissions the toys need, since they run in the background and cannot prompt on their own.
 
-Three toys ship today: **fluid**, an SPH fluid simulation driven by the accelerometer; **gallery**, photos you pick in the app, reduced to the matrix by average pooling; and **pulse**, three nested hollow rings that breathe with whatever audio is playing (one for bass, one for vocals, one for highs): the loudest group ends up outside, quiet groups rest still at the center, and rings only cross when two groups are equally loud, whether the sound goes through the speaker, wired headphones or Bluetooth. The app UI follows [sherry_theme](https://github.com/RemiH06/iroFactory), and full documentation with an interactive architecture diagram lives in [`docs/`](docs/index.html).
+Three toys ship today: **fluid**, an SPH fluid simulation driven by the accelerometer; **gallery**, photos you pick in the app, reduced to the matrix by average pooling; and **pulse**, three nested hollow shapes that breathe with whatever audio is playing (a hexagon for bass, a diamond for vocals, a triangle for highs, since the matrix has brightness but no color): the loudest group ends up outside, quiet groups rest still at the center, and shapes only cross when two groups are equally loud, whether the sound goes through the speaker, wired headphones or Bluetooth. The app UI follows [sherry_theme](https://github.com/RemiH06/iroFactory), and full documentation with an interactive architecture diagram lives in [`docs/`](docs/index.html).
 
 | App | fluid | gallery | pulse |
 |:---:|:---:|:---:|:---:|
@@ -71,7 +71,7 @@ ariadne generate
 
 - **fluid**: real-time SPH simulation at the matrix's native 25x25 resolution; tilt to pour, hold the Glyph Button to splash, long-press to reset
 - **gallery**: photos chosen with the system Photo Picker, center-cropped and average-pooled to the matrix; long-press for another one, never the same twice in a row
-- **pulse**: FFT of the system output mix split into six bands (sub, bass, low-mids, vocals, presence, air), each with its own gain control, grouped into three nested rings that grow with their group and float on a spring toward the center; smaller rings always stay inside larger ones with visible clearance, crossing only when radii match; works regardless of audio route
+- **pulse**: FFT of the system output mix split into six bands (sub, bass, low-mids, vocals, presence, air), each with its own gain control, grouped into three nested shapes (hexagon, diamond, triangle) that grow and sharpen with their group and float on a spring toward the center; smaller shapes always stay inside larger ones with visible clearance, crossing only when sizes match; works regardless of audio route
 - **gallery** processing tuned for LEDs: auto-levels, 3x3 unsharp mask and 2.2 gamma on output
 - Previews match the physical matrix: the real 489-LED layout of the Nothing Phone (3), square LEDs, faint 25x25 grid
 - Animated toys disable the Glyph Matrix timeout so the system does not fall back to the default toy mid-animation

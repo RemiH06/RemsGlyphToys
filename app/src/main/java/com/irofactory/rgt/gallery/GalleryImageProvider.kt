@@ -43,8 +43,10 @@ object GalleryImageProvider {
     private fun loadDownsampled(context: Context, uri: Uri, targetSize: Int = 200): Bitmap? {
         val resolver = context.contentResolver
 
+        // Con inJustDecodeBounds, decodeStream siempre regresa null: solo llena outWidth/outHeight
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+        val stream = resolver.openInputStream(uri) ?: return null
+        stream.use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         var sampleSize = 1

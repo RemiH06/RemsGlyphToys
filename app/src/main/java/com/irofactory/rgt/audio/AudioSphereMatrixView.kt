@@ -26,14 +26,15 @@ import kotlinx.coroutines.isActive
 
 /**
  * Vista previa en pantalla del toy pulse. Aqui se pide RECORD_AUDIO: el toy
- * corre en segundo plano y no puede mostrar el dialogo de permisos.
+ * corre en segundo plano y no puede mostrar el dialogo de permisos. Doble
+ * toque la reinicia: figuras desde cero y el audio vuelto a abrir.
  */
 @Composable
 fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val sc = sherryColors
 
-    val sim = remember { AudioBlobSimulation() }
+    var sim by remember { mutableStateOf(AudioBlobSimulation()) }
     val audioSource = remember { AudioSpectrumSource(context.applicationContext) }
     var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
     var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
@@ -54,7 +55,8 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             val dt = ((currentTime - lastTime) / 1000f).coerceIn(0.005f, 0.08f)
             lastTime = currentTime
             audioSource.update(dt)
-            sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness)
+            sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
+                audioSource.kick, audioSource.kickPresence)
             grid = sim.rasterize()
         }
     }
@@ -65,6 +67,12 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             neon    = sc.magenta,
             onClick = if (hasPermission) null else {
                 { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+            },
+            onDoubleClick = if (!hasPermission) null else {
+                {
+                    sim = AudioBlobSimulation()
+                    audioSource.restart()
+                }
             }
         )
         if (!hasPermission) {

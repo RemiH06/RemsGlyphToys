@@ -116,7 +116,7 @@ fun HomeScreen(onEditGlyph: (String?) -> Unit = {}, modifier: Modifier = Modifie
             index = "03",
             name = "pulse",
             neon = sc.magenta,
-            description = "Tres figuras anidadas que respiran con lo que se este reproduciendo, por bocina o audifonos: un hexagono para los graves, un diamante para las voces y un triangulo para los agudos. La que mas suena queda afuera, las calladas se quedan quietas en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte."
+            description = "Tres figuras anidadas que respiran con lo que se este reproduciendo, por bocina o audifonos: un hexagono para los graves, un diamante para las voces y un triangulo para los agudos. La que mas suena queda afuera, las calladas se quedan quietas en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte. Doble toque para reiniciarla."
         ) { AudioSphereMatrixView() }
 
         Text(

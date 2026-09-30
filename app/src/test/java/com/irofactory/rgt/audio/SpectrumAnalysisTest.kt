@@ -2,7 +2,6 @@ package com.irofactory.rgt.audio
 
 import java.io.File
 import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -47,7 +46,7 @@ class SpectrumAnalysisTest {
     private fun visualizerMagnitudes(block: DoubleArray): FloatArray {
         val re = block.copyOf()
         val im = DoubleArray(size)
-        fft(re, im)
+        VisualizerModel.fft(re, im)
         var peak = 1e-9
         for (k in 1 until size / 2) peak = maxOf(peak, hypot(re[k], im[k]))
         val scale = if (block.all { it == 0.0 }) 0.0 else 100.0 / peak
@@ -55,30 +54,6 @@ class SpectrumAnalysisTest {
             val qr = (re[k] * scale).roundToInt().coerceIn(-128, 127)
             val qi = (im[k] * scale).roundToInt().coerceIn(-128, 127)
             hypot(qr.toFloat(), qi.toFloat())
-        }
-    }
-
-    private fun fft(re: DoubleArray, im: DoubleArray) {
-        val n = re.size
-        var j = 0
-        for (i in 1 until n) {
-            var bit = n shr 1
-            while (j and bit != 0) { j = j xor bit; bit = bit shr 1 }
-            j = j xor bit
-            if (i < j) { re[i] = re[j].also { re[j] = re[i] }; im[i] = im[j].also { im[j] = im[i] } }
-        }
-        var len = 2
-        while (len <= n) {
-            val ang = -2 * PI / len
-            for (i in 0 until n step len) for (k in 0 until len / 2) {
-                val wr = cos(ang * k); val wi = sin(ang * k)
-                val ur = re[i + k]; val ui = im[i + k]
-                val vr = re[i + k + len / 2] * wr - im[i + k + len / 2] * wi
-                val vi = re[i + k + len / 2] * wi + im[i + k + len / 2] * wr
-                re[i + k] = ur + vr; im[i + k] = ui + vi
-                re[i + k + len / 2] = ur - vr; im[i + k + len / 2] = ui - vi
-            }
-            len = len shl 1
         }
     }
 

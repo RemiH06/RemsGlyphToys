@@ -37,6 +37,20 @@ import kotlin.math.min
  *                lento, baja mas rapido) y cuenta sobre todo lo que la rebasa.
  *                Sin esto los graves siempre salian asperos: en musica el bajo
  *                cambia de nota todo el tiempo y cada cambio parece un golpe.
+ *
+ *   [kick]       golpes de bombo (35-180 Hz): un golpe es cuando el contraste
+ *                de esa banda contra el resto del espectro brinca sobre su valle
+ *                reciente mientras domina el cuadro. Se usa el contraste y no la
+ *                potencia porque el Visualizer normaliza cada captura en pasos
+ *                de x2: cada paso sube todo el espectro por igual y pareceria un
+ *                golpe. Ademas debe subir la potencia propia de la banda, que
+ *                un bajo parejo no sube. Vale 1 al golpe y se apaga en ~0.1 s.
+ *   [kickPresence] si la cancion "tiene bombo", casi biestable: cuenta golpes
+ *                con memoria corta y se enciende con varios seguidos (histeresis:
+ *                se apaga solo cuando ya casi no hay), asi que se queda en 0 o
+ *                en 1 salvo al cambiar. Solo cuentan golpes confirmados, que
+ *                vuelven a caer poco despues: una nota nueva del bajo tambien
+ *                brinca, pero se queda arriba.
  */
 class SpectrumAnalysis {
 
@@ -60,6 +74,25 @@ class SpectrumAnalysis {
         private const val MAX_PEAKS = 10
         // Cuanto de la dureza es absoluta; el resto es lo que rebasa la base de la familia
         private val ABSOLUTE_WEIGHT = floatArrayOf(0.2f, 0.6f, 0.6f)
+
+        // Bombo: la banda de su golpe (el "click" agudo no se usa)
+        private const val KICK_LOW_HZ = 35f
+        private const val KICK_HIGH_HZ = 180f
+        // Cuanto deben brincar el contraste y la potencia propia de la banda
+        // (ln, 1.0 = x2.7 = ~4.3 dB) y que parte del cuadro debe ser suya
+        private const val KICK_RISE = 1.0f
+        private const val KICK_POWER_RISE = 0.5f
+        private const val CONTRAST_FLOOR = 0.05f
+        private const val KICK_SHARE = 0.35f
+        // Minimo entre golpes: 0.15 s = 400 BPM, para no contar dos veces el mismo
+        private const val KICK_REFRACTORY = 0.15f
+        // Confirmacion: en KICK_CONFIRM s el contraste debe caer KICK_DROP (ln, 0.7 = a la mitad)
+        private const val KICK_CONFIRM = 0.25f
+        private const val KICK_DROP = 0.7f
+        // Conteo de golpes: memoria (s) y umbrales de encendido y apagado
+        private const val KICK_MEMORY = 2.5f
+        private const val KICK_ON = 2.0f
+        private const val KICK_OFF = 1.3f
     }
 
     val bands = FloatArray(BAND_COUNT)
@@ -69,6 +102,26 @@ class SpectrumAnalysis {
     val flatness = FloatArray(FAMILY_COUNT)
     val flux = FloatArray(FAMILY_COUNT)
     val roughness = FloatArray(FAMILY_COUNT)
+
+    var kick = 0f
+        private set
+    var kickPresence = 0f
+        private set
+    /** Golpes confirmados con memoria corta; totales de golpes y de confirmados (diagnostico y pruebas). */
+    var kickRate = 0f
+        private set
+    var kickHits = 0
+        private set
+    var kickCount = 0
+        private set
+
+    private var contrastValley = 0f
+    private var powerValley = 0f
+    private var previousContrast = 0f
+    private var sinceKick = 1f
+    private var kickOn = false
+    private var pendingContrast = 0f
+    private var pendingAge = -1f   // < 0: ningun golpe esperando confirmacion
 
     private val peaks = FloatArray(BAND_COUNT) { BAND_FLOOR[it] }
     private val familyPower = FloatArray(FAMILY_COUNT)
@@ -124,6 +177,7 @@ class SpectrumAnalysis {
             harshness[f] = ABSOLUTE_WEIGHT[f] * absolute[f] + (1f - ABSOLUTE_WEIGHT[f]) * above
         }
         previous = magnitudes.copyOf()
+        detectKick(magnitudes, binHz, loudness, dt)
     }
 
     /** Sin audio: todo se desvanece. */
@@ -134,6 +188,63 @@ class SpectrumAnalysis {
             harshness[f] = smooth(harshness[f], 0f, dt, 0.03f, 0.6f)
         }
         previous = FloatArray(0)
+        pendingAge = -1f
+        updateKickState(hit = false, confirmed = false, strength = 0f, dt = dt)
+    }
+
+    private fun detectKick(m: FloatArray, binHz: Float, loudness: Float, dt: Float) {
+        val (from, to) = range(KICK_LOW_HZ, KICK_HIGH_HZ, binHz, m.size)
+        var kickPower = 0f
+        for (k in from until to) kickPower += m[k] * m[k]
+        var total = 0f
+        for (k in 1 until m.size) total += m[k] * m[k]
+        val share = if (total > 0f) kickPower / total else 0f
+        // Contraste con piso: sin el, cuando casi nada suena fuera de la banda
+        // cualquier fuga de la FFT lo hace brincar
+        val floor = CONTRAST_FLOOR * total + 1f
+        val contrast = ln((kickPower + floor) / (total - kickPower + floor))
+        val power = ln(kickPower + 1f)
+        val rise = contrast - contrastValley
+
+        sinceKick += dt
+        val hit = loudness >= 0.02f && rise > KICK_RISE && power - powerValley > KICK_POWER_RISE &&
+            contrast > previousContrast && share > KICK_SHARE && sinceKick > KICK_REFRACTORY
+        var confirmed = false
+        if (pendingAge >= 0f) {
+            pendingAge += dt
+            if (contrast < pendingContrast - KICK_DROP) { confirmed = true; pendingAge = -1f }
+            else if (pendingAge > KICK_CONFIRM) pendingAge = -1f
+        }
+        if (hit) {
+            sinceKick = 0f
+            kickHits++
+            pendingContrast = contrast
+            pendingAge = 0f
+        }
+        if (confirmed) kickCount++
+        updateKickState(hit, confirmed, strength = smoothstep(KICK_RISE, KICK_RISE + 1.5f, rise), dt = dt)
+
+        // Valles: bajan rapido con la cola del golpe y suben lento con lo
+        // sostenido, asi un bajo largo deja de contar como golpe en ~1 s
+        contrastValley = follow(contrastValley, contrast, dt)
+        powerValley = follow(powerValley, power, dt)
+        previousContrast = contrast
+    }
+
+    private fun follow(valley: Float, value: Float, dt: Float): Float {
+        val tau = if (value > valley) 0.5f else 0.06f
+        return valley + (value - valley) * (1f - exp(-dt / tau))
+    }
+
+    /** El destello sale con el golpe; el conteo espera a que se confirme. */
+    private fun updateKickState(hit: Boolean, confirmed: Boolean, strength: Float, dt: Float) {
+        kick *= exp(-dt / 0.12f)
+        kickRate *= exp(-dt / KICK_MEMORY)
+        if (hit) kick = max(kick, 0.5f + 0.5f * strength)
+        if (confirmed) kickRate += 1f
+        if (kickRate > KICK_ON) kickOn = true
+        if (kickRate < KICK_OFF) kickOn = false
+        kickPresence = smooth(kickPresence, if (kickOn) 1f else 0f, dt, attack = 0.25f, release = 1.0f)
     }
 
     private fun range(lowHz: Float, highHz: Float, binHz: Float, bins: Int): Pair<Int, Int> {

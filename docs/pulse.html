@@ -274,9 +274,9 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
 
     <h3>Capas en escala logarítmica</h3>
     <p>El tamaño de cada figura no sale de su energía sola sino de su proporción con la familia que más suena. En escala logarítmica, el doble de energía ya se ve bien separado, y familias parecidas quedan con tamaños parecidos:</p>
-    <div class="formula"><var>R</var><sub>ext</sub> <span class="op">=</span> <span class="c">3.0</span> <span class="op">+</span> <span class="c">8.6</span> · <var>e</var><sub>max</sub><sup>0.7</sup><br>
+    <div class="formula"><var>R</var><sub>ext</sub> <span class="op">=</span> <span class="c">3.0</span> <span class="op">+</span> <span class="c">9.0</span> · min( 1, <var>e</var><sub>max</sub> / <span class="c">0.6</span> )<sup>0.6</sup><br>
       <var>r</var><sub>i</sub> <span class="op">=</span> max( <span class="c">1.0</span>, <var>R</var><sub>ext</sub> · ( (<var>e</var><sub>i</sub> <span class="op">+</span> <span class="c">0.02</span>) / (<var>e</var><sub>max</sub> <span class="op">+</span> <span class="c">0.02</span>) )<sup>1.5</sup> )&nbsp;&nbsp;⇔&nbsp;&nbsp;log <var>r</var><sub>i</sub> <span class="op">=</span> log <var>R</var><sub>ext</sub> <span class="op">+</span> <span class="c">1.5</span> · log(<var>e</var><sub>i</sub>/<var>e</var><sub>max</sub>)
-      <span class="note">R y r en celdas de la matriz (el disco real mide 12.5). La que más suena siempre queda afuera; con la mitad de energía una figura queda a ~35 % del radio exterior; una familia casi callada colapsa al mínimo de 1 celda. El tamaño sigue a su objetivo con τ = 0.12 s. El exponente 1.5 salió de probar 0.8 primero: con 0.8 las capas quedaban casi encimadas.</span></div>
+      <span class="note">R y r en celdas de la matriz (el disco real mide 12.5). Ningún contorno pasa de 12, puntas y lóbulos incluidos: si no cabe, la figura entera se comprime y deja libre una orilla de media celda. La figura exterior llega a ese tope con 60 % de energía, porque la energía ya viene multiplicada por el volumen real y rara vez llega a 1. La que más suena siempre queda afuera; con la mitad de energía una figura queda a ~35 % del radio exterior; una familia casi callada colapsa al mínimo de 1 celda. El tamaño sigue a su objetivo con τ = 0.12 s. El exponente 1.5 salió de probar 0.8 primero: con 0.8 las capas quedaban casi encimadas.</span></div>
 
     <h3>El contorno de cada figura</h3>
     <p>Cada figura es un contorno en coordenadas polares alrededor de su centro. Tres términos: el polígono redondeado, las puntas de la dureza y los lóbulos de las bandas:</p>
@@ -405,8 +405,8 @@ function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(
 (() => {
   const cv = document.getElementById('lab');
   const ctx = cv.getContext('2d');
-  const N = 25, C = N / 2, LED_R = 12.5, EDGE = LED_R - 0.2;
-  const LOG_SPREAD = 1.5, ENERGY_FLOOR = 0.02, REST_RADIUS = 3.0, OUTER_RANGE = 8.6, MIN_RADIUS = 1.0;
+  const N = 25, C = N / 2, LED_R = 12.5, SHAPE_LIMIT = LED_R - 0.5;
+  const LOG_SPREAD = 1.5, ENERGY_FLOOR = 0.02, REST_RADIUS = 3.0, FULL_ENERGY = 0.6, GROWTH = 0.6, MIN_RADIUS = 1.0;
   const CROSS = 0.6, CROSS_BLEND = 1.6, CLEARANCE = 0.8, SPIKE = 0.45;
   const SPANS = [7, 11, 15, 17, 19, 21, 21, 23, 23, 25, 25, 25, 25, 25, 25, 25, 23, 23, 21, 21, 19, 17, 15, 11, 7];
   const mask = SPANS.map(w => { const s = (N - w) / 2; return Array.from({ length: N }, (_, c) => c >= s && c < s + w); });
@@ -507,7 +507,7 @@ function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(
     high.energy = 0.55 * b[4] + 0.45 * b[5]; high.level = [b[4], b[5]];
 
     const maxE = Math.max(low.energy, mid.energy, high.energy);
-    const outerSize = REST_RADIUS + OUTER_RANGE * Math.pow(maxE, 0.7);
+    const outerSize = REST_RADIUS + (SHAPE_LIMIT - REST_RADIUS) * Math.pow(Math.min(1, maxE / FULL_ENERGY), GROWTH);
     const sizeFollow = 1 - Math.exp(-dt / 0.12), drift = 1 - Math.exp(-dt / 0.4);
     for (const r of rings) {
       const ratio = (r.energy + ENERGY_FLOOR) / (maxE + ENERGY_FLOOR);
@@ -522,7 +522,7 @@ function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(
     high.x += 0.12 * high.energy * Math.sin(time * 11); high.y += 0.12 * high.energy * Math.cos(time * 13);
 
     for (const r of rings) r.squeeze = 1;
-    for (const r of rings) if (outer(r) > EDGE) r.squeeze = EDGE / outer(r);
+    for (const r of rings) if (outer(r) > SHAPE_LIMIT) r.squeeze = SHAPE_LIMIT / outer(r);
     const bySize = [...rings].sort((p, q) => q.size - p.size);
     for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
       const big = bySize[i], small = bySize[j];
@@ -539,7 +539,7 @@ function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(
       if (d > allowed && d > 1e-3) { const k = 1 - nest + nest * allowed / d; small.x = big.x + dx * k; small.y = big.y + dy * k; }
     }
     for (const r of rings) {
-      const d = Math.hypot(r.x, r.y), limit = Math.max(0, EDGE - outer(r));
+      const d = Math.hypot(r.x, r.y), limit = Math.max(0, SHAPE_LIMIT - outer(r));
       if (d > limit && d > 1e-3) { r.x = r.x / d * limit; r.y = r.y / d * limit; }
     }
   }

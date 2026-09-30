@@ -11,7 +11,7 @@ import com.irofactory.rgt.glyph.GlyphFrames
  * sistema, uno por familia de frecuencias (graves, voces, agudos).
  *
  * Si el Visualizer no arranca (permiso RECORD_AUDIO aun no concedido) o se
- * invalida a media cancion, se reintenta cada ~0.5 s y mientras tanto se
+ * invalida a media cancion, se reintenta cada ~1 s y mientras tanto se
  * muestra un anillo tenue.
  */
 class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy") {
@@ -27,12 +27,13 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
             retryIn -= dt
             if (retryIn <= 0f) {
                 audioSource.start()
-                retryIn = 0.5f   // crear el Visualizer puede fallar justo al arrancar; reintentar pronto
+                retryIn = 1f   // crear el Visualizer puede fallar justo al arrancar; reintentar pronto
             }
             if (!audioSource.isActive) return idleFrame
         }
         audioSource.update(dt)
-        sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness)
+        sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
+                audioSource.kick, audioSource.kickPresence)
         return GlyphFrames.fromGrid(sim.rasterize(), mask)
     }
 

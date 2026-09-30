@@ -30,7 +30,7 @@ class AudioSpectrumSource(private val context: Context) {
     private val measurement = Visualizer.MeasurementPeakRms()
     private var hasMeasurement = false
 
-    private val analysis = SpectrumAnalysis()
+    private var analysis = SpectrumAnalysis()
     private var magnitudes = FloatArray(0)
 
     /** Energia relativa por banda, 0f..1f (ver [SpectrumAnalysis.bands]). */
@@ -38,6 +38,12 @@ class AudioSpectrumSource(private val context: Context) {
 
     /** Dureza de graves, medios y agudos, 0f suave .. 1f aspero (ver [SpectrumAnalysis.harshness]). */
     val harshness: FloatArray get() = analysis.harshness
+
+    /** Golpe de bombo, 1f al golpe y se apaga (ver [SpectrumAnalysis.kick]). */
+    val kick: Float get() = analysis.kick
+
+    /** Si la cancion tiene bombo, casi 0f o 1f (ver [SpectrumAnalysis.kickPresence]). */
+    val kickPresence: Float get() = analysis.kickPresence
 
     /** Volumen real de salida, 0f (silencio) .. 1f (fuerte). */
     var loudness = 0f
@@ -74,6 +80,13 @@ class AudioSpectrumSource(private val context: Context) {
             stop()
             false
         }
+    }
+
+    /** Vuelve a abrir el Visualizer y olvida todo lo aprendido (ganancias, bases, bombo). */
+    fun restart(): Boolean {
+        stop()
+        analysis = SpectrumAnalysis()
+        return start()
     }
 
     fun stop() {

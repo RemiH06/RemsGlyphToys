@@ -35,6 +35,12 @@ import kotlin.math.sqrt
  * Las figuras giran lento, flotan con un resorte hacia el centro (cuanto
  * flotan depende de cuanto suenan) y sus bordes respiran con lobulos
  * organicos. Los cruces suman brillo. Motor puro, sin dependencias de Android.
+ *
+ * Experimento, cuarto anillo (KICK_RING): un circulo para el bombo, casi
+ * biestable. Sin bombo marcado es una bolita en el centro que solo se
+ * sobresalta con golpes sueltos; con bombo marcado se abre hasta el borde de
+ * la matriz, destella con cada golpe y las otras figuras se encogen para
+ * caber adentro.
  */
 class AudioBlobSimulation {
 
@@ -55,6 +61,13 @@ class AudioBlobSimulation {
         const val CLEARANCE = 0.8f
         // Largo maximo de las puntas con dureza total, relativo al tamano de la figura
         const val SPIKE = 0.45f
+
+        // Experimento: anillo del bombo. false lo quita por completo
+        const val KICK_RING = true
+        const val KICK_BALL = 0.8f
+        const val KICK_THICKNESS = 1.1f
+        // Espacio que deja a las otras figuras cuando esta abierto
+        const val KICK_RESERVE = KICK_THICKNESS + CLEARANCE + 0.4f
     }
 
     /**
@@ -129,13 +142,32 @@ class AudioBlobSimulation {
     private var loudness = 0f
     private var time = 0f
 
+    // Anillo del bombo: 0 bolita .. 1 abierto al borde, y destello del golpe
+    private var kickOpen = 0f
+    private var kickFlash = 0f
+    private var kickRadius = KICK_BALL
+
     /**
      * [bands] son las 6 bandas y [harshness] la dureza de graves, medios y
      * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
+     * [kick] y [kickPresence] mueven el anillo del bombo.
      */
-    fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray) {
+    fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray,
+             kick: Float = 0f, kickPresence: Float = 0f) {
         time += dt
         loudness = loud
+
+        if (KICK_RING) {
+            // Suavizado en S para que casi siempre este cerrado o abierto del todo
+            kickOpen = smoothstep(0f, 1f, kickPresence)
+            kickFlash = kick
+            val open = KICK_BALL + (edge - KICK_THICKNESS * 0.6f - KICK_BALL) * kickOpen
+            // Cerrado, cada golpe suelto infla un poco la bolita
+            kickRadius = open + (1f - kickOpen) * 1.2f * kick
+        }
+        // Lo que queda para las demas figuras dentro del anillo abierto
+        val limit = edge - kickOpen * KICK_RESERVE
+
         low.harshness = harshness[0]
         mid.harshness = harshness[1]
         high.harshness = harshness[2]
@@ -176,7 +208,7 @@ class AudioBlobSimulation {
         // grande con hueco visible (comprimiendose si no cabe) salvo que sus
         // tamanos se parezcan, que es cuando se cruzan. Luego, todas en la matriz.
         for (ring in rings) ring.squeeze = 1f
-        for (ring in rings) if (ring.outer > edge) ring.squeeze = edge / ring.outer
+        for (ring in rings) if (ring.outer > limit) ring.squeeze = limit / ring.outer
         val bySize = rings.sortedByDescending { it.size }
         for (i in bySize.indices) for (j in i + 1 until bySize.size) {
             val big = bySize[i]
@@ -203,8 +235,8 @@ class AudioBlobSimulation {
         }
         for (ring in rings) {
             val d = hypot(ring.x, ring.y)
-            val limit = (edge - ring.outer).coerceAtLeast(0f)
-            if (d > limit && d > 1e-3f) { ring.x = ring.x / d * limit; ring.y = ring.y / d * limit }
+            val room = (limit - ring.outer).coerceAtLeast(0f)
+            if (d > room && d > 1e-3f) { ring.x = ring.x / d * room; ring.y = ring.y / d * room }
         }
     }
 
@@ -212,6 +244,9 @@ class AudioBlobSimulation {
         val grid = Array(n) { FloatArray(n) }
         val light = 0.5f + 0.5f * loudness
         val levels = FloatArray(rings.size) { (0.4f + 0.6f * rings[it].energy) * light }
+        val kickLevel = (0.35f + 0.65f * kickFlash) * light
+        // Con el golpe el anillo abierto engrosa hacia adentro
+        val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash * kickOpen)
 
         for (row in 0 until n) {
             for (col in 0 until n) {
@@ -222,6 +257,7 @@ class AudioBlobSimulation {
                 // Mezcla tipo "screen": los cruces brillan mas sin saturar de golpe
                 var dark = 1f
                 for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
+                if (KICK_RING) dark *= 1f - kickShape(hypot(x, y), kickThickness) * kickLevel
                 grid[row][col] = 1f - dark
             }
         }
@@ -233,6 +269,13 @@ class AudioBlobSimulation {
         val dy = y - ring.y
         val d = hypot(dx, dy)
         return (1f - abs(d - ring.radius(atan2(dy, dx))) / ring.thickness).coerceIn(0f, 1f)
+    }
+
+    /** Contorno del anillo del bombo; cerrado se rellena para verse como bolita y no como aro. */
+    private fun kickShape(d: Float, thickness: Float): Float {
+        val rim = (1f - abs(d - kickRadius) / thickness).coerceIn(0f, 1f)
+        val ball = (kickRadius + 0.6f - d).coerceIn(0f, 1f) * (1f - kickOpen)
+        return maxOf(rim, ball)
     }
 
     private fun smoothstep(e0: Float, e1: Float, x: Float): Float {

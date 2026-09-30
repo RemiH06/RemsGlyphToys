@@ -1,9 +1,9 @@
 package com.irofactory.rgt.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
@@ -28,7 +28,9 @@ import kotlin.math.floor
  *
  * Con [onPaint] funciona como lienzo: reporta cada celda (fila, columna)
  * que toca el dedo, con start = true al presionar (trazo nuevo) y false al
- * arrastrar. [onClick] y [onPaint] no se combinan.
+ * arrastrar. [onPaint] no se combina con [onClick] ni [onDoubleClick].
+ * Con [onDoubleClick] un toque sencillo espera un momento a ver si llega el
+ * segundo.
  */
 @Composable
 fun GlyphMatrixCanvas(
@@ -36,11 +38,14 @@ fun GlyphMatrixCanvas(
     neon:     Color,
     modifier: Modifier = Modifier,
     onClick:  (() -> Unit)? = null,
+    onDoubleClick: (() -> Unit)? = null,
     onPaint:  ((row: Int, col: Int, start: Boolean) -> Unit)? = null
 ) {
     val sc = sherryColors
     val mask = remember { GlyphFrames.circularMask() }
     val paint by rememberUpdatedState(onPaint)
+    val click by rememberUpdatedState(onClick)
+    val doubleClick by rememberUpdatedState(onDoubleClick)
     val input = when {
         onPaint != null -> Modifier.pointerInput(Unit) {
             awaitEachGesture {
@@ -55,7 +60,12 @@ fun GlyphMatrixCanvas(
                 }
             }
         }
-        onClick != null -> Modifier.clickable(onClick = onClick)
+        onClick != null || onDoubleClick != null -> Modifier.pointerInput(onClick != null, onDoubleClick != null) {
+            detectTapGestures(
+                onTap = if (onClick != null) { _ -> click?.invoke() } else null,
+                onDoubleTap = if (onDoubleClick != null) { _ -> doubleClick?.invoke() } else null
+            )
+        }
         else -> Modifier
     }
 

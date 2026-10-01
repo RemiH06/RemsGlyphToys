@@ -46,6 +46,12 @@ import kotlin.random.Random
  *   - desde el centro: en reposo es una bolita tenue; cada golpe la lanza al
  *     borde con un destello y regresa sin prisa, ya al brillo minimo.
  * Sin bombo marcado los golpes sueltos apenas lo mueven.
+ *
+ * Reposo como ojo entrecerrado (EYE_REST): la apertura sigue al volumen. En
+ * silencio el diamante se aplana y se estira a lo ancho (los parpados), el
+ * hexagono queda chico al centro (la iris) y el triangulo dentro (la
+ * pupila), ambos recortados por los parpados. Con musica el ojo se abre y
+ * todo vuelve a su comportamiento normal.
  */
 class AudioBlobSimulation {
 
@@ -89,6 +95,21 @@ class AudioBlobSimulation {
         const val KICK_BAND = 1.5f
         const val KICK_WOBBLE = 1.2f
         const val KICK_IN = 11f
+
+        // Ojo en reposo. false regresa al reposo de antes (todo al centro)
+        const val EYE_REST = true
+        // Media anchura y media altura del ojo cerrado, en celdas. El ancho casi
+        // toca el borde de la matriz (12.5) sin que la linea del parpado se salga
+        const val EYE_WIDTH = 11.3f
+        const val EYE_HEIGHT = 1.6f
+        // Radio de la iris (hexagono) y de la pupila (triangulo) en reposo
+        const val IRIS_REST = 2.6f
+        const val PUPIL_REST = 1.2f
+        // Volumen con el que el ojo empieza a abrirse y con el que ya esta abierto
+        const val EYE_OPEN_FROM = 0.03f
+        const val EYE_OPEN_TO = 0.3f
+        // Puntos del contorno de los parpados
+        const val EYE_POINTS = 72
     }
 
     /**
@@ -177,6 +198,10 @@ class AudioBlobSimulation {
     private val kickLobePhase = FloatArray(kickLobes.size)
     private val random = Random(11)
 
+    // Ojo: 0 cerrado (reposo) .. 1 abierto, y contorno de los parpados (x, y intercalados)
+    private var eyeOpen = 0f
+    private val lid = FloatArray(EYE_POINTS * 2)
+
     /**
      * [bands] son las 6 bandas y [harshness] la dureza de graves, medios y
      * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
@@ -216,6 +241,12 @@ class AudioBlobSimulation {
             }
         }
 
+        if (EYE_REST) {
+            val target = smoothstep(EYE_OPEN_FROM, EYE_OPEN_TO, loud)
+            val tau = if (target > eyeOpen) 0.3f else 0.8f
+            eyeOpen += (target - eyeOpen) * (1f - exp(-dt / tau))
+        }
+
         low.harshness = harshness[0]
         mid.harshness = harshness[1]
         high.harshness = harshness[2]
@@ -234,7 +265,11 @@ class AudioBlobSimulation {
         val follow = 1f - exp(-dt / 0.4f)
         for (ring in rings) {
             val ratio = (ring.energy + ENERGY_FLOOR) / (maxEnergy + ENERGY_FLOOR)
-            val target = (outerSize * ratio.pow(LOG_SPREAD)).coerceAtLeast(MIN_RADIUS)
+            var target = (outerSize * ratio.pow(LOG_SPREAD)).coerceAtLeast(MIN_RADIUS)
+            if (EYE_REST) {
+                if (ring === low) target = lerp(IRIS_REST, target, eyeOpen)
+                if (ring === high) target = lerp(PUPIL_REST, target, eyeOpen)
+            }
             ring.size += (target - ring.size) * sizeFollow
 
             ring.rotation += ring.turnRate * (1f + 0.5f * ring.energy) * dt
@@ -247,6 +282,15 @@ class AudioBlobSimulation {
             val ty = amp * sin(ring.clock * 1.3f + 2f * ring.seed) * cos(ring.clock * 0.7f)
             ring.x += (tx - ring.x) * follow
             ring.y += (ty - ring.y) * follow
+        }
+        if (EYE_REST) {
+            // El diamante tiene simetria de 1/4 de vuelta: se envuelve a ±45° y,
+            // al cerrarse el ojo, gira hasta dejar sus vertices en horizontal
+            val quarter = PI_F / 2f
+            var a = mid.rotation % quarter
+            if (a > quarter / 2f) a -= quarter
+            if (a < -quarter / 2f) a += quarter
+            mid.rotation = a * (1f - (1f - eyeOpen) * (1f - exp(-dt / 0.3f)))
         }
         // Temblor leve de los agudos
         high.x += 0.12f * high.energy * sin(time * 11f)
@@ -261,7 +305,9 @@ class AudioBlobSimulation {
         for (i in bySize.indices) for (j in i + 1 until bySize.size) {
             val big = bySize[i]
             val small = bySize[j]
-            val nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
+            var nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
+            // Ojo cerrado: los parpados no empujan a la iris; la recortan al dibujar
+            if (EYE_REST && (big === mid || small === mid)) nest *= eyeOpen
             if (nest <= 0f) continue
             val gap = big.thickness + small.thickness + CLEARANCE
 
@@ -295,6 +341,8 @@ class AudioBlobSimulation {
         // Tenue en reposo y al regresar; solo el golpe destella
         val kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash)
+        val eyeClosed = if (EYE_REST) 1f - eyeOpen else 0f
+        if (eyeClosed > 0.001f) buildLid(eyeClosed)
 
         for (row in 0 until n) {
             for (col in 0 until n) {
@@ -304,7 +352,17 @@ class AudioBlobSimulation {
 
                 // Mezcla tipo "screen": los cruces brillan mas sin saturar de golpe
                 var dark = 1f
-                for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
+                if (eyeClosed > 0.001f) {
+                    // Parpados con su grosor real; iris y pupila solo dentro de ellos
+                    val (inside, distance) = lidDistance(x, y)
+                    val clip = (0.5f + (if (inside) distance else -distance) / 0.6f).coerceIn(0f, 1f)
+                    val keep = 1f - eyeClosed * (1f - clip)
+                    dark *= 1f - rim(x, y, low) * levels[0] * keep
+                    dark *= 1f - (1f - distance / mid.thickness).coerceIn(0f, 1f) * levels[1]
+                    dark *= 1f - rim(x, y, high) * levels[2] * keep
+                } else {
+                    for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
+                }
                 if (KICK_RING) {
                     val shape = if (KICK_FROM_OUTSIDE) kickBlob(x, y, KICK_BAND * (1f + 0.3f * kickFlash))
                         else kickShape(hypot(x, y), kickThickness)
@@ -322,6 +380,43 @@ class AudioBlobSimulation {
         val d = hypot(dx, dy)
         return (1f - abs(d - ring.radius(atan2(dy, dx))) / ring.thickness).coerceIn(0f, 1f)
     }
+
+    /**
+     * Contorno de los parpados: del diamante (abierto) a una almendra con
+     * puntas afiladas (cerrado), punto por punto. La almendra son dos
+     * parabolas y = ±H·(1 − (x/W)²), que se juntan en angulo en x = ±W.
+     */
+    private fun buildLid(closed: Float) {
+        for (i in 0 until EYE_POINTS) {
+            val theta = 2f * PI_F * i / EYE_POINTS
+            val c = cos(theta)
+            val s = sin(theta)
+            val r = mid.radius(theta)
+            val almondX = EYE_WIDTH * c
+            val almondY = EYE_HEIGHT * s * abs(s)
+            lid[2 * i] = mid.x + lerp(r * c, almondX, closed)
+            lid[2 * i + 1] = mid.y + lerp(r * s, almondY, closed)
+        }
+    }
+
+    /** Si (x, y) cae dentro de los parpados y a que distancia de su linea, en celdas. */
+    private fun lidDistance(x: Float, y: Float): Pair<Boolean, Float> {
+        var inside = false
+        var best = Float.MAX_VALUE
+        var j = EYE_POINTS - 1
+        for (i in 0 until EYE_POINTS) {
+            val ax = lid[2 * j]; val ay = lid[2 * j + 1]
+            val bx = lid[2 * i]; val by = lid[2 * i + 1]
+            if ((ay > y) != (by > y) && x < ax + (y - ay) / (by - ay) * (bx - ax)) inside = !inside
+            val ex = bx - ax; val ey = by - ay
+            val t = (((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey + 1e-6f)).coerceIn(0f, 1f)
+            best = minOf(best, hypot(x - ax - t * ex, y - ay - t * ey))
+            j = i
+        }
+        return inside to best
+    }
+
+    private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
     /** Contorno del anillo del bombo; chico se rellena para verse como bolita y no como aro. */
     private fun kickShape(d: Float, thickness: Float): Float {

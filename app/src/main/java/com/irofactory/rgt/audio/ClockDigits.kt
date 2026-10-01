@@ -5,17 +5,18 @@ import kotlin.math.hypot
 /**
  * ClockDigits
  * ───────────────────────────────────────────────────────────────────────────
- * Cada dígito 0-9 como un trazo de una sola línea (como una fuente de
- * plotter): una lista de sub-trazos, cada uno una polilínea sobre las seis
- * esquinas de una caja de siete segmentos (TL, TR, ML, MR, BL, BR). La
- * mayoría de los dígitos salen en un solo trazo continuo; 3 y 4 necesitan
- * levantar la pluma una vez.
+ * Cada dígito 0-9, y las letras A/P del indicador am/pm, como un trazo de
+ * una sola línea (como una fuente de plotter): una lista de sub-trazos, cada
+ * uno una polilínea sobre las esquinas de una caja de siete segmentos (TL,
+ * TR, ML, MR, BL, BR, mas TC arriba al centro para las letras). La mayoría
+ * de los dígitos salen en un solo trazo continuo; 3 y 4 necesitan levantar
+ * la pluma una vez, igual que la A (el trazo y el travesaño).
  *
- * [digitPoints] reparte [count] puntos sobre esos trazos (proporcional a su
- * longitud) y los coloca en la matriz, para que el reposo "reloj" de
- * [AudioBlobSimulation] los use como destino del contorno de un anillo: el
- * mismo punto que hoy traza el borde de una figura, ahí termina trazando el
- * dígito.
+ * [digitPoints] y [letterPoints] reparten puntos sobre esos trazos
+ * (proporcional a su longitud) y los colocan en la matriz, para que el
+ * reposo "reloj" de [AudioBlobSimulation] los use como destino del contorno
+ * de un anillo: el mismo punto que hoy traza el borde de una figura, ahí
+ * termina trazando el dígito.
  */
 object ClockDigits {
 
@@ -25,8 +26,10 @@ object ClockDigits {
     private const val MR = 3
     private const val BL = 4
     private const val BR = 5
-    private val CORNER_X = floatArrayOf(0f, 2f, 0f, 2f, 0f, 2f)
-    private val CORNER_Y = floatArrayOf(0f, 0f, 2f, 2f, 4f, 4f)
+    private const val TC = 6
+    private const val MC = 7
+    private val CORNER_X = floatArrayOf(0f, 2f, 0f, 2f, 0f, 2f, 1f, 1f)
+    private val CORNER_Y = floatArrayOf(0f, 0f, 2f, 2f, 4f, 4f, 0f, 2f)
 
     /** Caja de 2x4 unidades; cada dígito es 1 o 2 sub-trazos por esas esquinas. */
     private val DIGITS: Array<Array<IntArray>> = arrayOf(
@@ -42,7 +45,15 @@ object ClockDigits {
         arrayOf(intArrayOf(MR, TR, TL, ML, MR, BR, BL))              // 9
     )
 
-    /** Media unidad: ancho 2 y alto 4 de la caja, a celdas de la matriz. */
+    /**
+     * "A" (dos diagonales al vertice de arriba, mas el travesaño), "P" (palo
+     * con una vuelta arriba) y "M" (palo, baja al centro, sube, palo).
+     */
+    private val LETTER_A: Array<IntArray> = arrayOf(intArrayOf(BL, TC, BR), intArrayOf(ML, MR))
+    private val LETTER_P: Array<IntArray> = arrayOf(intArrayOf(BL, TL, TR, MR, ML))
+    private val LETTER_M: Array<IntArray> = arrayOf(intArrayOf(BL, TL, MC, TR, BR))
+
+    /** Media unidad: ancho 2 y alto 4 de la caja, a celdas de la matriz, para los digitos. */
     const val SCALE = 1.5f
     const val WIDTH = 2f * SCALE
     const val HEIGHT = 4f * SCALE
@@ -53,9 +64,19 @@ object ClockDigits {
      * Regresa los puntos (x, y intercalados) y, por punto, el id de su
      * sub-trazo: dos puntos consecutivos se conectan solo si comparten id.
      */
-    fun digitPoints(digit: Int, left: Float, top: Float, count: Int): Pair<FloatArray, IntArray> {
-        val paths = DIGITS[digit]
-        if (paths.size == 1) return resample(paths[0], left, top, count) to IntArray(count)
+    fun digitPoints(digit: Int, left: Float, top: Float, count: Int): Pair<FloatArray, IntArray> =
+        pathPoints(DIGITS[digit], left, top, SCALE, count)
+
+    /** Puntos de la letra "P" (si [pm]) o "A", a la escala [scale] (mas chica que la de los digitos). */
+    fun letterPoints(pm: Boolean, left: Float, top: Float, scale: Float, count: Int): Pair<FloatArray, IntArray> =
+        pathPoints(if (pm) LETTER_P else LETTER_A, left, top, scale, count)
+
+    /** Puntos de la letra "M", la segunda del indicador am/pm. */
+    fun letterMPoints(left: Float, top: Float, scale: Float, count: Int): Pair<FloatArray, IntArray> =
+        pathPoints(LETTER_M, left, top, scale, count)
+
+    private fun pathPoints(paths: Array<IntArray>, left: Float, top: Float, scale: Float, count: Int): Pair<FloatArray, IntArray> {
+        if (paths.size == 1) return resample(paths[0], left, top, scale, count) to IntArray(count)
 
         val lengths = paths.map { pathLength(it) }
         val total = lengths.sum().coerceAtLeast(1e-6f)
@@ -68,7 +89,7 @@ object ClockDigits {
         var at = 0
         for ((i, path) in paths.withIndex()) {
             val n = counts[i].coerceAtLeast(1)
-            resample(path, left, top, n).copyInto(points, at * 2)
+            resample(path, left, top, scale, n).copyInto(points, at * 2)
             for (k in at until at + n) subIds[k] = i
             at += n
         }
@@ -87,9 +108,9 @@ object ClockDigits {
     }
 
     /** [count] puntos parejos por longitud de arco sobre la polilinea [corners], ya en coordenadas de la matriz. */
-    private fun resample(corners: IntArray, left: Float, top: Float, count: Int): FloatArray {
-        val xs = FloatArray(corners.size) { left + CORNER_X[corners[it]] * SCALE }
-        val ys = FloatArray(corners.size) { top + CORNER_Y[corners[it]] * SCALE }
+    private fun resample(corners: IntArray, left: Float, top: Float, scale: Float, count: Int): FloatArray {
+        val xs = FloatArray(corners.size) { left + CORNER_X[corners[it]] * scale }
+        val ys = FloatArray(corners.size) { top + CORNER_Y[corners[it]] * scale }
         val segLen = FloatArray(corners.size - 1) { hypot((xs[it + 1] - xs[it]).toDouble(), (ys[it + 1] - ys[it]).toDouble()).toFloat() }
         val total = segLen.sum()
         val out = FloatArray(count * 2)

@@ -123,19 +123,25 @@ class AudioSpectrumSource(private val context: Context) {
         val buf = fft ?: return decay(dt)
         if (v.getFft(buf) != Visualizer.SUCCESS || binHz <= 0f) return decay(dt)
 
-        val rawLoud = if (hasMeasurement && v.getMeasurementPeakRms(measurement) == Visualizer.SUCCESS) {
-            // -5500 mB (~ -55 dB) es silencio practico, -1000 mB ya es fuerte.
-            ((measurement.mRms + 5500) / 4500f).coerceIn(0f, 1f)
-        } else {
-            1f
-        }
-        loudness = smooth(loudness, rawLoud, dt, attack = 0.05f, release = 0.3f)
-
         // Formato de getFft: [Re0, Re(n/2), Re1, Im1, Re2, Im2, ...]
         magnitudes[0] = abs(buf[0].toFloat())
+        var any = magnitudes[0] > 0f
         for (k in 1 until magnitudes.size) {
             magnitudes[k] = hypot(buf[2 * k].toFloat(), buf[2 * k + 1].toFloat())
+            if (magnitudes[k] > 0f) any = true
         }
+
+        // Al pausar, la salida deja de procesar audio: la captura llega en cero
+        // pero la medicion se queda con el ultimo volumen. Captura en cero es
+        // silencio, diga lo que diga la medicion.
+        val rawLoud = when {
+            !any -> 0f
+            hasMeasurement && v.getMeasurementPeakRms(measurement) == Visualizer.SUCCESS ->
+                // -5500 mB (~ -55 dB) es silencio practico, -1000 mB ya es fuerte.
+                ((measurement.mRms + 5500) / 4500f).coerceIn(0f, 1f)
+            else -> 1f
+        }
+        loudness = smooth(loudness, rawLoud, dt, attack = 0.05f, release = 0.3f)
         analysis.analyze(magnitudes, binHz, rawLoud, dt)
     }
 

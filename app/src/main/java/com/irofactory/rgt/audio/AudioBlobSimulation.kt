@@ -1,5 +1,6 @@
 package com.irofactory.rgt.audio
 
+import com.irofactory.rgt.fluid.FlipFluidSimulation
 import com.irofactory.rgt.glyph.GlyphFrames
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -48,8 +49,9 @@ import kotlin.random.Random
  *     borde con un destello y regresa sin prisa, ya al brillo minimo.
  * Sin bombo marcado los golpes sueltos apenas lo mueven.
  *
- * Reposo ([restPose], elegido en la app). En los ojos la apertura sigue al
- * volumen; con musica se abren y todo vuelve a su comportamiento normal:
+ * Reposo ([restPose], elegido en la app). Salvo en centro, que tanto se
+ * forma el reposo sigue al volumen ([awake]); con musica todo vuelve a su
+ * comportamiento normal:
  *   - centro: las tres figuras se juntan al centro.
  *   - ojo: el diamante se aplana en una almendra horizontal con puntas que
  *     casi toca los bordes (los parpados); el hexagono queda chico al centro
@@ -60,6 +62,19 @@ import kotlin.random.Random
  *     en medio (un brillo). La mirada va de un lado a otro: se queda un rato
  *     en cada lado y cambia rapido; la iris se mueve la mitad que la rendija,
  *     como un ojo redondo.
+ *   - logo: las tres figuras regulares, una dentro de otra con las
+ *     proporciones del logo de la app, girando lento cada una a su ritmo.
+ *   - boom: el anillo del bombo se queda adentro, quieto en su maximo, como
+ *     blob que gira lento; las tres figuras se pegan al borde, redondas, y
+ *     se camuflan en el.
+ *   - plomada: el triangulo crece, cuelga un poco hacia el suelo y apunta
+ *     siempre hacia abajo (con un resorte que lo hace oscilar al girar el
+ *     telefono); el hexagono y el diamante quedan tenues como marco.
+ *   - derretir: las figuras, tal como estaban, se vuelven agua (la FLIP de
+ *     fluid) que cae hacia el suelo.
+ *   - piezas: las figuras como poligonos regulares solidos que caen y chocan
+ *     entre si ([SolidPieces]).
+ * Los tres ultimos usan la gravedad de [setGravity].
  */
 class AudioBlobSimulation {
 
@@ -120,7 +135,34 @@ class AudioBlobSimulation {
         // Mirada del gato: cuanto se desliza la rendija (celdas) y cada cuanto va y vuelve (s)
         const val LOOK = 3f
         const val LOOK_PERIOD = 7f
-        // Volumen con el que el ojo empieza a abrirse y con el que ya esta abierto
+        // Logo: radio y amplitud de su poligono redondeado (la del logo de la app)
+        // para hexagono, diamante y triangulo
+        val LOGO_SIZE = floatArrayOf(10.9f, 7.2f, 3.6f)
+        val LOGO_AMP = floatArrayOf(0.11f, 0.14f, 0.24f)
+        // Boom: radios de las figuras pegadas al borde (dentro de la banda del
+        // bombo, 9.5 a 12.5), amplitud de sus lobulos y brillo del blob
+        val BOOM_SIZE = floatArrayOf(11.2f, 10.6f, 10f)
+        val BOOM_LOBES = floatArrayOf(0.5f, 0.35f, 0.25f)
+        const val BOOM_LEVEL = 0.55f
+        // Plomada: radios de hexagono, diamante y triangulo, definicion del
+        // triangulo, cuanto cuelga hacia el suelo, resorte de su giro y brillo
+        // del marco (hexagono y diamante) respecto al normal
+        val PLUMB_SIZE = floatArrayOf(11.6f, 8.8f, 6.5f)
+        const val PLUMB_AMP = 0.32f
+        const val PLUMB_HANG = 1.5f
+        const val PLUMB_STIFFNESS = 12f
+        const val PLUMB_DAMPING = 2.5f
+        const val PLUMB_FRAME = 0.35f
+        // Derretir y piezas: volumen con el que la musica ya "cambio de estado"
+        // (debajo: se derriten o caen; arriba: vuelven las figuras), brillo
+        // desde el que un LED de las figuras ya es agua con densidad completa,
+        // y brillo del agua y las piezas
+        const val SOLIDIFY = 0.85f
+        const val REFORM = 0.95f
+        const val MELT_FULL = 0.15f
+        const val MELT_LEVEL = 0.45f
+        const val PIECES_LEVEL = 0.5f
+        // Volumen con el que el reposo empieza a deshacerse y con el que ya no queda nada
         const val EYE_OPEN_FROM = 0.03f
         const val EYE_OPEN_TO = 0.3f
         // Puntos del contorno de los parpados o la rendija
@@ -157,8 +199,15 @@ class AudioBlobSimulation {
         /** Compresion para caber dentro de otra figura o de la matriz (1 = libre). */
         var squeeze = 1f
 
+        /** Definicion fija de reposo y cuanto pesa (0 = la de la musica). */
+        var restAmp = 0f
+        var restBlend = 0f
+
         /** Que tan marcada esta la forma: mas definida entre mas suena; mas redonda si es suave. */
-        private val definition get() = shapeAmp * (0.6f + 0.4f * energy) * (0.4f + 0.6f * harshness)
+        private val definition: Float get() {
+            val playing = shapeAmp * (0.6f + 0.4f * energy) * (0.4f + 0.6f * harshness)
+            return playing + (restAmp - playing) * restBlend
+        }
         /** Largo de las puntas: solo aparecen con dureza, y crecen mas rapido que ella. */
         private val spikeLength get() = SPIKE * harshness * sqrt(harshness)
         /** Que tan delgadas son las puntas: exponente del perfil del vertice. */
@@ -216,9 +265,21 @@ class AudioBlobSimulation {
     /** Como se ve en silencio; se puede cambiar en cualquier momento. */
     var restPose = RestPose.CAT_EYE
 
-    // Ojo: 0 en reposo .. 1 abierto, y contorno de los parpados o la rendija (x, y intercalados)
-    private var eyeOpen = 0f
-    private val isEye get() = restPose != RestPose.CENTER
+    // Gravedad en m/s², ejes de la matriz (y hacia abajo); la escribe el sensor desde otro hilo
+    @Volatile private var gravityX = 0f
+    @Volatile private var gravityY = 9.81f
+    private var plumbSpin = 0f
+
+    // Derretir y piezas: si ya cambiaron de estado y cuanto se ven (0 = figuras, 1 = agua o piezas)
+    private var transformed = false
+    private var transformedShown = 0f
+    private val fluid by lazy { FlipFluidSimulation() }
+    private val pieces by lazy { SolidPieces() }
+    private val meltRandom = Random(5)
+
+    // 0 = reposo formado .. 1 = musica, y contorno de los parpados o la rendija (x, y intercalados)
+    private var awake = 1f
+    private val isEye get() = restPose == RestPose.HUMAN_EYE || restPose == RestPose.CAT_EYE
     private val lid = FloatArray(EYE_POINTS * 2)
 
     /**
@@ -226,6 +287,12 @@ class AudioBlobSimulation {
      * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
      * [kick] y [kickPresence] mueven el anillo del bombo.
      */
+    /** Aceleracion del telefono en m/s², ya en ejes de la matriz (y hacia abajo). */
+    fun setGravity(x: Float, y: Float) {
+        gravityX = x
+        gravityY = y
+    }
+
     fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray,
              kick: Float = 0f, kickPresence: Float = 0f) {
         time += dt
@@ -260,12 +327,28 @@ class AudioBlobSimulation {
             }
         }
 
-        if (isEye) {
+        if (restPose != RestPose.CENTER) {
             val target = smoothstep(EYE_OPEN_FROM, EYE_OPEN_TO, loud)
-            val tau = if (target > eyeOpen) 0.3f else 0.8f
-            eyeOpen += (target - eyeOpen) * (1f - exp(-dt / tau))
+            val tau = if (target > awake) 0.3f else 0.8f
+            awake += (target - awake) * (1f - exp(-dt / tau))
         } else {
-            eyeOpen = 1f
+            awake = 1f
+        }
+        val rest = 1f - awake
+        for ((i, ring) in rings.withIndex()) {
+            ring.restAmp = if (restPose == RestPose.PLUMB) PLUMB_AMP else LOGO_AMP[i]
+            ring.restBlend = when {
+                restPose == RestPose.LOGO -> rest
+                restPose == RestPose.PLUMB && ring === high -> rest
+                else -> 0f
+            }
+        }
+        stepTransformation(dt)
+        if (KICK_RING && restPose == RestPose.BOOM) {
+            // El blob entra y se queda; sus lobulos van a una forma tranquila y siguen girando
+            val settle = rest * (1f - exp(-dt / 0.6f))
+            for (i in kickLobes.indices) kickLobeAmp[i] += (BOOM_LOBES[i] - kickLobeAmp[i]) * settle
+            kickRadius += (KICK_IN - kickRadius) * rest
         }
 
         low.harshness = harshness[0]
@@ -287,10 +370,24 @@ class AudioBlobSimulation {
         for (ring in rings) {
             val ratio = (ring.energy + ENERGY_FLOOR) / (maxEnergy + ENERGY_FLOOR)
             var target = (outerSize * ratio.pow(LOG_SPREAD)).coerceAtLeast(MIN_RADIUS)
-            if (isEye) {
-                val cat = restPose == RestPose.CAT_EYE
-                if (ring === low) target = lerp(if (cat) CAT_IRIS else HUMAN_IRIS, target, eyeOpen)
-                if (ring === high) target = lerp(if (cat) CAT_PUPIL else HUMAN_PUPIL, target, eyeOpen)
+            val i = rings.indexOf(ring)
+            target = when (restPose) {
+                RestPose.CENTER -> target
+                RestPose.HUMAN_EYE -> when (ring) {
+                    low -> lerp(HUMAN_IRIS, target, awake)
+                    high -> lerp(HUMAN_PUPIL, target, awake)
+                    else -> target
+                }
+                RestPose.CAT_EYE -> when (ring) {
+                    low -> lerp(CAT_IRIS, target, awake)
+                    high -> lerp(CAT_PUPIL, target, awake)
+                    else -> target
+                }
+                RestPose.LOGO -> lerp(LOGO_SIZE[i], target, awake)
+                RestPose.BOOM -> lerp(BOOM_SIZE[i], target, awake)
+                RestPose.PLUMB -> lerp(PLUMB_SIZE[i], target, awake)
+                // Ocultas mientras son agua o piezas: reposo normal, para volver desde el centro
+                RestPose.MELT, RestPose.PIECES -> target
             }
             ring.size += (target - ring.size) * sizeFollow
 
@@ -300,8 +397,9 @@ class AudioBlobSimulation {
             // Flotar: deriva lenta proporcional a su energia, resorte al centro
             ring.clock += dt * ring.driftSpeed * (0.3f + ring.energy)
             val amp = ring.drift * ring.energy
-            val tx = amp * sin(ring.clock + ring.seed) + lookShift(ring)
-            val ty = amp * sin(ring.clock * 1.3f + 2f * ring.seed) * cos(ring.clock * 0.7f)
+            val (hangX, hangY) = hang(ring)
+            val tx = amp * sin(ring.clock + ring.seed) + lookShift(ring) + hangX
+            val ty = amp * sin(ring.clock * 1.3f + 2f * ring.seed) * cos(ring.clock * 0.7f) + hangY
             ring.x += (tx - ring.x) * follow
             ring.y += (ty - ring.y) * follow
         }
@@ -312,7 +410,16 @@ class AudioBlobSimulation {
             var a = mid.rotation % quarter
             if (a > quarter / 2f) a -= quarter
             if (a < -quarter / 2f) a += quarter
-            mid.rotation = a * (1f - (1f - eyeOpen) * (1f - exp(-dt / 0.3f)))
+            mid.rotation = a * (1f - (1f - awake) * (1f - exp(-dt / 0.3f)))
+        }
+        if (restPose == RestPose.PLUMB) {
+            // Resorte hacia el suelo; con simetria de 1/3 de vuelta, cualquier vertice sirve
+            val third = 2f * PI_F / 3f
+            var error = (atan2(gravityY, gravityX) - high.rotation) % third
+            if (error > third / 2f) error -= third
+            if (error < -third / 2f) error += third
+            plumbSpin += (PLUMB_STIFFNESS * error - PLUMB_DAMPING * plumbSpin) * dt
+            high.rotation += plumbSpin * dt * rest
         }
         // Temblor leve de los agudos
         high.x += 0.12f * high.energy * sin(time * 11f)
@@ -329,7 +436,13 @@ class AudioBlobSimulation {
             val small = bySize[j]
             var nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
             // En reposo los parpados o la rendija no empujan ni los empujan: van encima
-            if (isEye && (big === mid || small === mid)) nest *= eyeOpen
+            when {
+                // Ojos: los parpados o la rendija van encima de las demas
+                isEye && (big === mid || small === mid) -> nest *= awake
+                // Logo y boom: sus tamanos ya estan elegidos, sin empujarse
+                restPose == RestPose.LOGO || restPose == RestPose.BOOM ||
+                    restPose == RestPose.PLUMB -> nest *= awake
+            }
             if (nest <= 0f) continue
             val gap = big.thickness + small.thickness + CLEARANCE
 
@@ -360,10 +473,22 @@ class AudioBlobSimulation {
         val grid = Array(n) { FloatArray(n) }
         val light = 0.5f + 0.5f * loudness
         val levels = FloatArray(rings.size) { (0.4f + 0.6f * rings[it].energy) * light }
+        if (restPose == RestPose.PLUMB) {
+            // Marco tenue, triangulo protagonista
+            val rest = 1f - awake
+            levels[0] *= lerp(1f, PLUMB_FRAME, rest)
+            levels[1] *= lerp(1f, PLUMB_FRAME, rest)
+            levels[2] *= lerp(1f, 1.6f, rest)
+        }
+        // Mientras son agua o piezas, las figuras no se ven
+        val ringsShown = 1f - transformedShown
+        for (i in levels.indices) levels[i] *= ringsShown
+        val fluidGrid = if (restPose == RestPose.MELT && transformedShown > 0.001f) fluid.rasterize() else null
         // Tenue en reposo y al regresar; solo el golpe destella
-        val kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
+        var kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
+        if (restPose == RestPose.BOOM) kickLevel += (BOOM_LEVEL * light - kickLevel) * (1f - awake)
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash)
-        val eyeClosed = 1f - eyeOpen
+        val eyeClosed = if (isEye) 1f - awake else 0f
         if (eyeClosed > 0.001f) buildLid(eyeClosed)
 
         for (row in 0 until n) {
@@ -392,6 +517,10 @@ class AudioBlobSimulation {
                     val shape = if (KICK_FROM_OUTSIDE) kickBlob(x, y, KICK_BAND * (1f + 0.3f * kickFlash))
                         else kickShape(hypot(x, y), kickThickness)
                     dark *= 1f - shape * kickLevel
+                }
+                if (transformedShown > 0.001f) {
+                    if (fluidGrid != null) dark *= 1f - fluidGrid[row][col] * MELT_LEVEL * transformedShown
+                    if (restPose == RestPose.PIECES) dark *= 1f - pieces.brightness(x, y) * PIECES_LEVEL * transformedShown
                 }
                 grid[row][col] = 1f - dark
             }
@@ -449,8 +578,74 @@ class AudioBlobSimulation {
      */
     private fun lookShift(ring: Ring): Float {
         if (restPose != RestPose.CAT_EYE) return 0f
-        val look = LOOK * tanh(3f * sin(2f * PI_F * time / LOOK_PERIOD)) * (1f - eyeOpen)
+        val look = LOOK * tanh(3f * sin(2f * PI_F * time / LOOK_PERIOD)) * (1f - awake)
         return if (ring === low) 0.5f * look else look
+    }
+
+    /** Plomada: el triangulo cuelga un poco hacia donde apunta la gravedad. */
+    private fun hang(ring: Ring): Pair<Float, Float> {
+        if (restPose != RestPose.PLUMB || ring !== high) return 0f to 0f
+        val g = hypot(gravityX, gravityY).coerceAtLeast(1e-3f)
+        val k = PLUMB_HANG * (1f - awake) / g
+        return gravityX * k to gravityY * k
+    }
+
+    /**
+     * Derretir y piezas: con el silencio las figuras se vuelven agua o piezas
+     * (una vez, tal como estaban) y al volver la musica regresan las figuras.
+     * Cambian al bajar de SOLIDIFY y regresan solo al volver arriba de REFORM:
+     * con un solo umbral parpadearian en cuanto el volumen ronde ese valor.
+     */
+    private fun stepTransformation(dt: Float) {
+        val transforms = restPose == RestPose.MELT || restPose == RestPose.PIECES
+        if (!transforms) {
+            transformed = false
+            transformedShown = 0f
+            return
+        }
+        if (!transformed && awake < SOLIDIFY) {
+            transformed = true
+            if (restPose == RestPose.MELT) {
+                // El agua nace justo donde estaban las figuras (completas): el cambio no se nota
+                transformedShown = 0f
+                fluid.pour(meltPoints(rasterize()))
+                transformedShown = 1f
+            } else {
+                pieces.reset(floatArrayOf(low.rotation, mid.rotation, high.rotation))
+            }
+        } else if (transformed && awake > REFORM) {
+            transformed = false
+        }
+        val target = if (transformed) 1f else 0f
+        transformedShown += (target - transformedShown) * (1f - exp(-dt / 0.25f))
+        if (transformedShown > 0.001f) {
+            if (restPose == RestPose.MELT) {
+                fluid.setGravity(gravityX, gravityY)
+                fluid.step(dt)
+            } else {
+                pieces.step(dt, gravityX, gravityY)
+            }
+        }
+    }
+
+    /**
+     * Particulas para el agua, al azar dentro de cada LED. Un LED encendido de
+     * las figuras lleva la densidad del agua en reposo (si no, el agua recien
+     * nacida es tan rala que no se ve); los mas tenues, proporcionalmente menos.
+     */
+    private fun meltPoints(grid: Array<FloatArray>): FloatArray {
+        val points = ArrayList<Float>()
+        val perLed = fluid.particlesPerLed
+        val inner = GlyphFrames.LED_RADIUS - 0.4f
+        for (row in 0 until n) for (col in 0 until n) {
+            val count = (perLed * (grid[row][col] / MELT_FULL).coerceAtMost(1f)).toInt()
+            repeat(count) {
+                val x = col + meltRandom.nextFloat()
+                val y = row + meltRandom.nextFloat()
+                if (hypot(x - center, y - center) < inner) { points += x; points += y }
+            }
+        }
+        return points.toFloatArray()
     }
 
     private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t

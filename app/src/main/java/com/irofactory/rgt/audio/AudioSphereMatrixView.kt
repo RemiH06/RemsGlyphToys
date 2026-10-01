@@ -1,13 +1,17 @@
 package com.irofactory.rgt.audio
 
 import android.Manifest
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.irofactory.rgt.fluid.gravityListener
 import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
 import com.irofactory.rgt.ui.components.SherryButton
 import com.irofactory.rgt.ui.theme.sherryColors
@@ -51,6 +56,18 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
     val audioSource = remember { AudioSpectrumSource(context.applicationContext) }
     var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
     var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
+    // Gravedad aparte de la simulacion: el doble toque la reemplaza
+    val gravity = remember { floatArrayOf(0f, 9.81f) }
+
+    DisposableEffect(restPose.usesGravity) {
+        val sensorManager = context.getSystemService(SensorManager::class.java)
+        val listener = gravityListener(viewedFromBack = false) { x, y -> gravity[0] = x; gravity[1] = y }
+        if (restPose.usesGravity) {
+            val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
+        }
+        onDispose { sensorManager.unregisterListener(listener) }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -80,6 +97,7 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             lastTime = currentTime
             audioSource.update(dt)
             sim.restPose = restPose
+            sim.setGravity(gravity[0], gravity[1])
             sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence)
             grid = sim.rasterize()
@@ -116,6 +134,7 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             }
         }
         Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {

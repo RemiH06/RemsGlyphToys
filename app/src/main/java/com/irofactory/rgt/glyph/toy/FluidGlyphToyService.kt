@@ -22,7 +22,7 @@ class FluidGlyphToyService : AnimatedGlyphToyService("FluidGlyphToy") {
     private val sim = FlipFluidSimulation()
     private val mask = GlyphFrames.circularMask()
     private val sensorManager by lazy { getSystemService(SensorManager::class.java) }
-    private val listener by lazy { gravityListener(sim, viewedFromBack = true) }
+    private val listener by lazy { gravityListener(viewedFromBack = true, onGravity = sim::setGravity) }
 
     override fun onToyStart() {
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)

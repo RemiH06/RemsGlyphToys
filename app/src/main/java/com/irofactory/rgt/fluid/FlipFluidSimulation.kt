@@ -101,6 +101,24 @@ class FlipFluidSimulation(private val fill: Float = 0.38f) {
         gy = y * GRAVITY_SCALE
     }
 
+    /**
+     * Reemplaza el agua por particulas quietas en [points] (x, y intercalados,
+     * en LEDs desde la esquina). Llamar desde el mismo hilo que [step]. La
+     * densidad de reposo queda la del panal de [spawn], no la de estos puntos:
+     * si no, unos puntos ralos se tomarian como "agua en reposo".
+     */
+    fun pour(points: FloatArray) {
+        count = points.size / 2
+        pos = points.copyOf()
+        vel = FloatArray(2 * count)
+        cellParticleIds = IntArray(count)
+        u.fill(0f); v.fill(0f)
+        restDensity = restPerLed * h * h
+    }
+
+    /** Particulas por LED con el agua en reposo. */
+    val particlesPerLed: Float get() = restPerLed
+
     fun splash() { pendingSplash = true }
     fun reset() { pendingReset = true }
 

@@ -4,13 +4,23 @@ import android.content.Context
 import androidx.core.content.edit
 
 /** Como se ve pulse en silencio. [label] es el texto del selector en la app. */
-enum class RestPose(val label: String) {
+enum class RestPose(val label: String, val usesGravity: Boolean = false) {
     /** Las tres figuras se juntan al centro. */
     CENTER("centro"),
     /** Ojo entrecerrado: el diamante hace de parpados, el hexagono de iris y el triangulo de pupila. */
     HUMAN_EYE("ojo"),
     /** Ojo de gato del tamano de la matriz: rendija vertical que mira de un lado a otro. */
-    CAT_EYE("gato");
+    CAT_EYE("gato"),
+    /** Las tres figuras regulares, una dentro de otra como el logo, girando lento. */
+    LOGO("logo"),
+    /** El anillo del bombo quieto en su maximo, girando lento; las figuras camufladas en el. */
+    BOOM("boom"),
+    /** El triangulo, grande, apunta siempre al suelo; hexagono y diamante quedan tenues como marco. */
+    PLUMB("plomada", usesGravity = true),
+    /** Las figuras se derriten en agua (la FLIP de fluid) que cae con la gravedad. */
+    MELT("derretir", usesGravity = true),
+    /** Las figuras como poligonos solidos que caen con la gravedad y chocan entre si. */
+    PIECES("piezas", usesGravity = true);
 
     companion object {
         private const val PREFS = "pulse"

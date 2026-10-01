@@ -9,8 +9,6 @@ import com.irofactory.rgt.R
 enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false) {
     /** Las tres figuras se juntan al centro. */
     CENTER(R.string.rest_center),
-    /** Ojo entrecerrado: el diamante hace de parpados, el hexagono de iris y el triangulo de pupila. */
-    HUMAN_EYE(R.string.rest_human_eye),
     /** Ojo de gato del tamano de la matriz: rendija vertical que mira de un lado a otro. */
     CAT_EYE(R.string.rest_cat_eye),
     /** Las tres figuras regulares, una dentro de otra como el logo, girando lento. */
@@ -24,7 +22,9 @@ enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false)
     /** Las figuras como poligonos solidos que caen con la gravedad y chocan entre si. */
     PIECES(R.string.rest_pieces, usesGravity = true),
     /** Oscuridad: todo se apaga en silencio y vuelve a aparecer desvaneciendose. */
-    VANISH(R.string.rest_vanish);
+    VANISH(R.string.rest_vanish),
+    /** La hora actual: cada figura traza los digitos de la hora o los minutos. */
+    CLOCK(R.string.rest_clock);
 
     companion object {
         private const val PREFS = "pulse"

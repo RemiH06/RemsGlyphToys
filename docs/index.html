@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rem's Glyph Toys · Docs</title>
-<meta name="description" content="Glyph Toys para la Glyph Matrix 25x25 del Nothing Phone (3): fluid, gallery y pulse.">
+<meta name="description" content="Glyph Toys para la Glyph Matrix 25x25 del Nothing Phone (3): fluid, gallery (con dibujo) y pulse, personalizable.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|vt323:400&display=swap" rel="stylesheet">
@@ -208,7 +208,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap hero-grid">
     <div>
       <h1 class="cursor">REM'S<br>GLYPH TOYS</h1>
-      <p>Tres Glyph Toys para la matriz 25x25 del Nothing Phone (3): un fluido que obedece a la gravedad, fotos de tu galería y una figura que respira con el audio.</p>
+      <p>Tres Glyph Toys para la matriz 25x25 del Nothing Phone (3): un fluido que obedece a la gravedad, fotos de tu galería (o glifos que dibujas tú) y tres figuras que respiran con el audio, personalizables por completo.</p>
       <span class="badge cyan">kotlin</span><span class="badge cyan">jetpack compose</span><span class="badge lime">glyph matrix sdk 2.0</span><span class="badge accent">agpl-3.0</span>
     </div>
     <canvas class="hero-matrix" id="matrix" width="480" height="480" aria-label="Simulación de la Glyph Matrix"></canvas>
@@ -228,13 +228,13 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       </article>
       <article class="card" id="gallery" style="--tone: var(--lime)">
         <h3>gallery</h3>
-        <p>Las fotos que eliges en la app, recortadas al centro y promediadas por bloques a la matriz.</p>
-        <dl><dt>long-press</dt><dd>otra foto</dd><dt>elegir</dt><dd>photo picker, sin permisos</dd><dt>sin fotos</dt><dd>anillo tenue</dd></dl>
+        <p>Las fotos que eliges en la app, recortadas al centro y promediadas por bloques a la matriz, o glifos que dibujas tú mismo sobre los 489 LEDs reales. Comparten la misma rotación.</p>
+        <dl><dt>long-press</dt><dd>otra foto o glifo</dd><dt>elegir</dt><dd>photo picker, sin permisos</dd><dt>dibujar</dt><dd>pincel de 5 intensidades</dd><dt>sin contenido</dt><dd>anillo tenue</dd></dl>
       </article>
       <article class="card" id="pulse" style="--tone: var(--magenta)">
         <h3>pulse</h3>
-        <p>Tres figuras anidadas que respiran con el audio: hexágono (graves), diamante (voces) y triángulo (agudos). La que más suena queda afuera; las calladas se quedan quietas en el centro.</p>
-        <dl><dt>bandas</dt><dd>6, por FFT</dd><dt>audio</dt><dd>bocina, cable o bluetooth</dd><dt>sin permiso</dt><dd>anillo tenue</dd></dl>
+        <p>Tres figuras que respiran con el audio (hexágono o pentágono en graves, diamante o almendra en voces, triángulo o círculo en agudos) más un cuarto anillo para el bombo. La que más suena queda afuera; las calladas van a un reposo que eliges: ojo, gato, el logo, oscuridad y más.</p>
+        <dl><dt>bandas</dt><dd>6, por FFT</dd><dt>audio</dt><dd>bocina, cable o bluetooth</dd><dt>personalizar</dt><dd>reposo y figura de cada familia</dd><dt>sin permiso</dt><dd>anillo tenue</dd></dl>
         <p style="margin:10px 0 0"><a href="pulse.html">cómo funciona, con todas sus fórmulas →</a></p>
       </article>
     </div>
@@ -245,10 +245,12 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap">
     <h2>Capturas</h2>
     <div class="shots">
-      <figure class="shot"><img src="screenshots/rgt_ss1.png" alt="App con las tres vistas previas" loading="lazy"><div class="slot"><b>01</b>captura pendiente<br>screenshots/rgt_ss1.png</div><figcaption>App · vistas previas</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss1.png" alt="App con las tres vistas previas" loading="lazy"><div class="slot"><b>01</b>captura pendiente<br>screenshots/rgt_ss1.png</div><figcaption>App · inicio</figcaption></figure>
       <figure class="shot"><img src="screenshots/rgt_ss2.png" alt="Toy fluid en la Glyph Matrix" loading="lazy"><div class="slot"><b>02</b>captura pendiente<br>screenshots/rgt_ss2.png</div><figcaption>fluid · matriz física</figcaption></figure>
       <figure class="shot"><img src="screenshots/rgt_ss3.png" alt="Toy gallery en la Glyph Matrix" loading="lazy"><div class="slot"><b>03</b>captura pendiente<br>screenshots/rgt_ss3.png</div><figcaption>gallery · matriz física</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss4.png" alt="Toy pulse en la Glyph Matrix" loading="lazy"><div class="slot"><b>04</b>captura pendiente<br>screenshots/rgt_ss4.png</div><figcaption>pulse · matriz física</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss4.png" alt="Dibujando un glifo sobre los LEDs reales" loading="lazy"><div class="slot"><b>04</b>captura pendiente<br>screenshots/rgt_ss4.png</div><figcaption>mis glifos · lienzo</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss5.png" alt="Toy pulse en la Glyph Matrix" loading="lazy"><div class="slot"><b>05</b>captura pendiente<br>screenshots/rgt_ss5.png</div><figcaption>pulse · matriz física</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss6.png" alt="Pantalla para elegir el reposo y las figuras de pulse" loading="lazy"><div class="slot"><b>06</b>captura pendiente<br>screenshots/rgt_ss6.png</div><figcaption>pulse · personalizar</figcaption></figure>
     </div>
   </div>
 </section>
@@ -262,8 +264,9 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
     <div class="step-row"><div class="step-num">02</div><p><b>Frame</b> · <code>GlyphFrames.fromGrid</code> aplica la forma real de la matriz (489 LEDs, filas de 7 a 25) y la convierte a un <code>IntArray</code> de 625 valores <code>0..4095</code>.</p></div>
     <div class="step-row"><div class="step-num">03</div><p><b>Matriz</b> · el servicio entrega el frame con <code>setMatrixFrame(int[])</code> en el hilo principal, a ~30 fps en fluid y pulse.</p></div>
     <div class="callout warn"><div class="callout-title">reposo</div><p>El sistema retira cualquier toy tras el ajuste <code>glyph_toy_timeout</code>. <code>setGlyphMatrixTimeout</code> del SDK no lo evita: el servicio del Glyph solo lo acepta de una lista fija de apps de Nothing.</p></div>
-    <div class="callout"><div class="callout-title">bandas de pulse</div><p><code>AudioSpectrumSource</code> separa la FFT de <code>Visualizer</code> en sub, bajos, medios-bajos, voces, presencia y aire, cada una con su propio control de ganancia. <code>AudioBlobSimulation</code> las agrupa en tres blobs huecos que tienden a un polígono redondeado, porque la matriz solo distingue brillo, no color: hexágono (graves), diamante (voces) y triángulo (agudos). Giran lento y sus bordes respiran con lóbulos orgánicos. Las capas van en escala logarítmica: el tamaño de cada figura sale de su energía relativa a la familia más fuerte, así que la que más suena queda afuera, la que menos adentro, y solo se solapan cuando dos familias suenan casi igual. Con solo voces, graves y agudos quedan quietos en el centro y únicamente se mueve la figura de la voz. Todo el detalle, con un laboratorio interactivo, en <a href="pulse.html">pulse a detalle</a>.</p></div>
+    <div class="callout"><div class="callout-title">bandas de pulse</div><p><code>AudioSpectrumSource</code> separa la FFT de <code>Visualizer</code> en sub, bajos, medios-bajos, voces, presencia y aire, cada una con su propio control de ganancia. <code>AudioBlobSimulation</code> las agrupa en tres blobs huecos que tienden a un polígono redondeado, porque la matriz solo distingue brillo, no color: hexágono (graves), diamante (voces) y triángulo (agudos), cada uno con una figura alternativa elegible (pentágono, almendra, círculo). Giran lento y sus bordes respiran con lóbulos orgánicos. Las capas van en escala logarítmica: el tamaño de cada figura sale de su energía relativa a la familia más fuerte, así que la que más suena queda afuera, la que menos adentro, y solo se solapan cuando dos familias suenan casi igual. Sin nada que suene, las figuras van a un reposo elegible (ojo, gato, el logo, oscuridad, entre otros). Todo el detalle, con un laboratorio interactivo, en <a href="pulse.html">pulse a detalle</a>.</p></div>
     <div class="callout"><div class="callout-title">dureza</div><p><code>SpectrumAnalysis</code> estima qué tan armonioso o áspero es cada familia (no su calidad): planitud del espectro (tonal contra ruidoso), brusquedad (cuánto sube de un cuadro al siguiente) y aspereza entre picos con la curva de Plomp-Levelt. Un sonido suave redondea su figura; uno áspero o brusco afila sus vértices y los estira en puntas.</p></div>
+    <div class="callout"><div class="callout-title">bombo y melodía</div><p><code>SpectrumAnalysis</code> también detecta golpes de bombo (35–180 Hz, por contraste contra el resto del espectro, resistente a los saltos de ganancia automática del Visualizer) y si hay una línea melódica (una nota y sus armónicos, contra un acorde o ruido). El cuarto anillo de pulse usa el bombo para entrar al borde o destellar; el diamante solo crece de verdad cuando hay línea melódica, para no inflarse con cualquier acorde instrumental.</p></div>
 
     <div class="diagram">
       <div class="diagram-bar"><span>ariadne · grafo del repo</span><a href="architecture/rem-s-glyph-toys.html" target="_blank" rel="noopener">abrir en pestaña ↗</a></div>

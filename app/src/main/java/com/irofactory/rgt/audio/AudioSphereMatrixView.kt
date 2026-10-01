@@ -107,8 +107,10 @@ fun AudioSphereMatrixView(
             sim.restPose = currentPose
             sim.style = currentStyle
             sim.setGravity(gravity[0], gravity[1])
+            val now = java.time.LocalTime.now()
             sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
-                audioSource.kick, audioSource.kickPresence, audioSource.melody)
+                audioSource.kick, audioSource.kickPresence, audioSource.melody,
+                now.hour, now.minute)
             grid = sim.rasterize()
         }
     }

@@ -60,9 +60,6 @@ import kotlin.random.Random
  * forma el reposo sigue al volumen ([awake]); con musica todo vuelve a su
  * comportamiento normal:
  *   - centro: las tres figuras se juntan al centro.
- *   - ojo: el diamante se aplana en una almendra horizontal con puntas que
- *     casi toca los bordes (los parpados); el hexagono queda chico al centro
- *     (la iris) y el triangulo dentro (la pupila), recortados por los parpados.
  *   - gato: del tamano de la matriz. El hexagono crece hasta el tope (la iris,
  *     como si el silencio la dejara caer hasta el fondo), el diamante se vuelve
  *     una rendija vertical con puntas (la pupila) y el triangulo queda chico
@@ -82,6 +79,11 @@ import kotlin.random.Random
  *   - piezas: las figuras como poligonos regulares solidos que caen y chocan
  *     entre si ([SolidPieces]).
  *   - oscuridad: todo se apaga y, con la musica, vuelve desvaneciendose.
+ *   - reloj: los contornos de las tres figuras se convierten, punto por
+ *     punto, en los trazos de la hora actual (HH:MM): el hexagono dibuja las
+ *     decenas de la hora, el diamante las unidades de la hora y las decenas
+ *     de los minutos (la mitad de su contorno cada una) y el triangulo las
+ *     unidades de los minutos. Vuelven a sus figuras igual, punto por punto.
  * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
  * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
  * cada particula viaja a un punto del contorno de su figura, y cada pieza se
@@ -139,13 +141,6 @@ class AudioBlobSimulation {
         const val KICK_WOBBLE = 1.2f
         const val KICK_IN = 11f
 
-        // Ojo humano en reposo: media anchura y media altura de la almendra
-        // (casi toca el borde, 12.5, sin que la linea se salga), y radios de
-        // la iris (hexagono) y la pupila (triangulo)
-        const val HUMAN_WIDTH = 11.3f
-        const val HUMAN_HEIGHT = 1.6f
-        const val HUMAN_IRIS = 2.6f
-        const val HUMAN_PUPIL = 1.2f
         // Ojo de gato en reposo: media anchura y media altura de la rendija,
         // radio de la iris (12 = el tope de las figuras) y del brillo
         const val SLIT_WIDTH = 2f
@@ -182,6 +177,15 @@ class AudioBlobSimulation {
         const val MELT_FULL = 0.15f
         const val MELT_LEVEL = 0.45f
         const val PIECES_LEVEL = 0.5f
+        // Reloj: puntos por digito, caja y posicion de cada uno (centradas en la
+        // matriz; HH:MM en 24 horas, como ClockDigits.WIDTH/HEIGHT las define),
+        // y radio y brillo de los dos puntos del separador ":"
+        const val CLOCK_POINTS = 44
+        val CLOCK_TOP = -ClockDigits.HEIGHT / 2f
+        val CLOCK_LEFT = floatArrayOf(-9.8f, -5.2f, 2.2f, 6.8f)
+        const val COLON_RADIUS = 0.55f
+        const val COLON_LEVEL = 0.5f
+
         // Segundos que tardan el agua o las piezas en volver a ser las figuras;
         // antes, el agua se reparte pegada al borde (radio y grosor de esa capa)
         const val REFORM_TIME = 2f
@@ -313,6 +317,10 @@ class AudioBlobSimulation {
     /** Como se ve en silencio; se puede cambiar en cualquier momento. */
     var restPose = RestPose.CAT_EYE
 
+    // Reloj: hora del dia que escribe el reposo "reloj", puesta por quien llama a step()
+    private var clockHour = 0
+    private var clockMinute = 0
+
     /** Figuras y estilo del bombo; se puede cambiar en cualquier momento. */
     var style = PulseStyle()
         set(value) {
@@ -354,7 +362,7 @@ class AudioBlobSimulation {
 
     // 0 = reposo formado .. 1 = musica, y contorno de los parpados o la rendija (x, y intercalados)
     private var awake = 1f
-    private val isEye get() = restPose == RestPose.HUMAN_EYE || restPose == RestPose.CAT_EYE
+    private val isEye get() = restPose == RestPose.CAT_EYE
     private val lid = FloatArray(EYE_POINTS * 2)
 
     /** Aceleracion del telefono en m/s², ya en ejes de la matriz (y hacia abajo). */
@@ -370,9 +378,12 @@ class AudioBlobSimulation {
      * silbido o viento) deja crecer al diamante.
      */
     fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray,
-             kick: Float = 0f, kickPresence: Float = 0f, melody: Float = 1f) {
+             kick: Float = 0f, kickPresence: Float = 0f, melody: Float = 1f,
+             hour: Int = 0, minute: Int = 0) {
         time += dt
         loudness = loud
+        clockHour = hour
+        clockMinute = minute
 
         if (KICK_RING) {
             // Golpe nuevo: [kick] brinca de golpe y luego solo cae
@@ -461,16 +472,13 @@ class AudioBlobSimulation {
             val i = rings.indexOf(ring)
             target = when (restPose) {
                 RestPose.CENTER -> target
-                RestPose.HUMAN_EYE -> when (ring) {
-                    low -> lerp(HUMAN_IRIS, target, awake)
-                    high -> lerp(HUMAN_PUPIL, target, awake)
-                    else -> target
-                }
                 RestPose.CAT_EYE -> when (ring) {
                     low -> lerp(CAT_IRIS, target, awake)
                     high -> lerp(CAT_PUPIL, target, awake)
                     else -> target
                 }
+                // El reloj no cambia el tamano de las figuras: solo su contorno, al dibujarlas
+                RestPose.CLOCK -> target
                 RestPose.LOGO -> lerp(LOGO_SIZE[i], target, awake)
                 RestPose.BOOM -> lerp(BOOM_SIZE[i], target, awake)
                 RestPose.PLUMB -> lerp(PLUMB_SIZE[i], target, awake)
@@ -535,7 +543,7 @@ class AudioBlobSimulation {
                 isEye && (big === mid || small === mid) -> nest *= awake
                 // Logo y boom: sus tamanos ya estan elegidos, sin empujarse
                 restPose == RestPose.LOGO || restPose == RestPose.BOOM ||
-                    restPose == RestPose.PLUMB -> nest *= awake
+                    restPose == RestPose.PLUMB || restPose == RestPose.CLOCK -> nest *= awake
             }
             if (nest <= 0f) continue
             val gap = big.thickness + small.thickness + CLEARANCE
@@ -596,6 +604,7 @@ class AudioBlobSimulation {
         // Parpados, rendija o almendra: el diamante se dibuja como contorno con su grosor real
         val midOutline = eyeClosed > 0.001f || midAlmond
         if (midOutline) buildLid(eyeClosed)
+        val clock = if (restPose == RestPose.CLOCK) buildClock(1f - awake) else null
 
         for (row in 0 until n) {
             for (col in 0 until n) {
@@ -605,16 +614,17 @@ class AudioBlobSimulation {
 
                 // Mezcla tipo "screen": los cruces brillan mas sin saturar de golpe
                 var dark = 1f
-                if (midOutline) {
-                    // En el ojo humano la iris y la pupila solo se ven dentro de los parpados
-                    val (inside, distance) = lidDistance(x, y)
-                    val keep = if (restPose == RestPose.HUMAN_EYE) {
-                        val clip = (0.5f + (if (inside) distance else -distance) / 0.6f).coerceIn(0f, 1f)
-                        1f - eyeClosed * (1f - clip)
-                    } else 1f
-                    dark *= 1f - rim(x, y, low) * levels[0] * keep
+                if (clock != null) {
+                    for (i in rings.indices) {
+                        val d = strokeDistance(clock.points[i], clock.subIds[i], x, y)
+                        dark *= 1f - (1f - d / rings[i].thickness).coerceIn(0f, 1f) * levels[i]
+                    }
+                    for (dot in clock.colons) dark *= 1f - colonDot(x, y, dot) * COLON_LEVEL * light * clock.rest
+                } else if (midOutline) {
+                    val distance = lidDistance(x, y)
+                    dark *= 1f - rim(x, y, low) * levels[0]
                     dark *= 1f - (1f - distance / mid.thickness).coerceIn(0f, 1f) * levels[1]
-                    dark *= 1f - rim(x, y, high) * levels[2] * keep
+                    dark *= 1f - rim(x, y, high) * levels[2]
                 } else {
                     for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
                 }
@@ -650,52 +660,115 @@ class AudioBlobSimulation {
     }
 
     /**
-     * Contorno de los parpados o la rendija: del diamante (abierto) a una
-     * almendra con puntas afiladas (reposo), punto por punto. La almendra son
-     * dos parabolas que se juntan en angulo: horizontal en el ojo humano,
-     * y = ±H·(1 − (x/W)²); vertical en el gato, x = ±W·(1 − (y/H)²).
+     * Contorno de la rendija del gato: del diamante (abierto) a una almendra
+     * vertical con puntas afiladas (reposo), punto por punto: x = ±W·(1 − (y/H)²).
      */
     private fun buildLid(closed: Float) {
         for (i in 0 until EYE_POINTS) {
             val theta = 2f * PI_F * i / EYE_POINTS
-            val c = cos(theta)
-            val s = sin(theta)
-            val r = mid.radius(theta)
-            val cat = restPose == RestPose.CAT_EYE
-            // Con musica: el diamante, o la almendra de largo fijo que el tamano solo
-            // abre (hasta volverse tan alta como larga); los lobulos y puntas la
-            // deforman en la misma proporcion que al diamante
-            var openX = r * c
-            var openY = r * s
-            if (midAlmond) {
-                val size = (mid.size * mid.squeeze).coerceAtLeast(0.5f)
-                val opening = size.coerceAtMost(ALMOND_HALF_WIDTH)
-                openX = ALMOND_HALF_WIDTH * c * r / size
-                openY = opening * s * abs(s) * r / size
-            }
-            val almondX = if (cat) SLIT_WIDTH * c * abs(c) else HUMAN_WIDTH * c
-            val almondY = if (cat) SLIT_HEIGHT * s else HUMAN_HEIGHT * s * abs(s)
+            val (openX, openY) = midOpenPoint(theta)
+            val almondX = SLIT_WIDTH * cos(theta) * abs(cos(theta))
+            val almondY = SLIT_HEIGHT * sin(theta)
             lid[2 * i] = mid.x + lerp(openX, almondX, closed)
             lid[2 * i + 1] = mid.y + lerp(openY, almondY, closed)
         }
     }
 
-    /** Si (x, y) cae dentro del contorno y a que distancia de su linea, en celdas. */
-    private fun lidDistance(x: Float, y: Float): Pair<Boolean, Float> {
-        var inside = false
+    /**
+     * Punto del contorno del diamante en [theta], relativo a su centro: la
+     * almendra si [midAlmond] (de largo fijo, que el tamano solo abre hasta
+     * volverse tan alta como larga; los lobulos y puntas la deforman en la
+     * misma proporcion que al diamante), si no el diamante normal.
+     */
+    private fun midOpenPoint(theta: Float): Pair<Float, Float> {
+        val r = mid.radius(theta)
+        val c = cos(theta)
+        val s = sin(theta)
+        if (!midAlmond) return r * c to r * s
+        val size = (mid.size * mid.squeeze).coerceAtLeast(0.5f)
+        val opening = size.coerceAtMost(ALMOND_HALF_WIDTH)
+        return (ALMOND_HALF_WIDTH * c * r / size) to (opening * s * abs(s) * r / size)
+    }
+
+    /** Distancia de (x, y) a la linea de la rendija, en celdas. */
+    private fun lidDistance(x: Float, y: Float): Float {
         var best = Float.MAX_VALUE
         var j = EYE_POINTS - 1
         for (i in 0 until EYE_POINTS) {
             val ax = lid[2 * j]; val ay = lid[2 * j + 1]
             val bx = lid[2 * i]; val by = lid[2 * i + 1]
-            if ((ay > y) != (by > y) && x < ax + (y - ay) / (by - ay) * (bx - ax)) inside = !inside
             val ex = bx - ax; val ey = by - ay
             val t = (((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey + 1e-6f)).coerceIn(0f, 1f)
             best = minOf(best, hypot(x - ax - t * ex, y - ay - t * ey))
             j = i
         }
-        return inside to best
+        return best
     }
+
+    /** Contornos de las tres figuras mezclados hacia los trazos de la hora, y los dos puntos de ":". */
+    private class ClockOverlay(val points: Array<FloatArray>, val subIds: Array<IntArray>, val colons: Array<FloatArray>, val rest: Float)
+
+    /** Arma [ClockOverlay] para el reposo "reloj": [rest] 0 = las figuras tal cual, 1 = la hora. */
+    private fun buildClock(rest: Float): ClockOverlay {
+        val h1 = clockHour / 10; val h2 = clockHour % 10
+        val m1 = clockMinute / 10; val m2 = clockMinute % 10
+        val lowRing = ringToDigit(low, { th -> val r = low.radius(th); r * cos(th) to r * sin(th) },
+            0f, 2f * PI_F, h1, CLOCK_LEFT[0], CLOCK_POINTS, rest, 0)
+        val midA = ringToDigit(mid, ::midOpenPoint, 0f, PI_F, h2, CLOCK_LEFT[1], CLOCK_POINTS, rest, 0)
+        val midB = ringToDigit(mid, ::midOpenPoint, PI_F, 2f * PI_F, m1, CLOCK_LEFT[2], CLOCK_POINTS, rest, 10)
+        val highRing = ringToDigit(high, { th -> val r = high.radius(th); r * cos(th) to r * sin(th) },
+            0f, 2f * PI_F, m2, CLOCK_LEFT[3], CLOCK_POINTS, rest, 0)
+        val colons = arrayOf(
+            floatArrayOf(0f, CLOCK_TOP + 1.3f * ClockDigits.SCALE),
+            floatArrayOf(0f, CLOCK_TOP + 2.7f * ClockDigits.SCALE)
+        )
+        return ClockOverlay(
+            arrayOf(lowRing.first, midA.first + midB.first, highRing.first),
+            arrayOf(lowRing.second, midA.second + midB.second, highRing.second),
+            colons, rest
+        )
+    }
+
+    /**
+     * Puntos del contorno propio de [ring] ([ownPoint], relativo a su centro)
+     * entre [thetaFrom] y [thetaTo] parejos, mezclados hacia el digito
+     * [digit] (su caja en [left], [CLOCK_TOP]) en [rest]. [subOffset] evita
+     * que el id de sub-trazo del digito choque con el de otro digito del
+     * mismo anillo (el diamante dibuja dos, uno en cada mitad de su angulo).
+     */
+    private fun ringToDigit(
+        ring: Ring, ownPoint: (Float) -> Pair<Float, Float>, thetaFrom: Float, thetaTo: Float,
+        digit: Int, left: Float, count: Int, rest: Float, subOffset: Int
+    ): Pair<FloatArray, IntArray> {
+        val (target, subIds) = ClockDigits.digitPoints(digit, left, CLOCK_TOP, count)
+        val points = FloatArray(count * 2)
+        for (i in 0 until count) {
+            val theta = thetaFrom + (thetaTo - thetaFrom) * i / (count - 1).coerceAtLeast(1)
+            val (ox, oy) = ownPoint(theta)
+            points[2 * i] = lerp(ring.x + ox, target[2 * i], rest)
+            points[2 * i + 1] = lerp(ring.y + oy, target[2 * i + 1], rest)
+            if (subOffset != 0) subIds[i] += subOffset
+        }
+        return points to subIds
+    }
+
+    /** Distancia de (x, y) a la polilinea [points]; conecta dos puntos consecutivos solo si comparten [subIds]. */
+    private fun strokeDistance(points: FloatArray, subIds: IntArray, x: Float, y: Float): Float {
+        var best = Float.MAX_VALUE
+        for (i in 1 until subIds.size) {
+            if (subIds[i] != subIds[i - 1]) continue
+            val ax = points[2 * (i - 1)]; val ay = points[2 * (i - 1) + 1]
+            val bx = points[2 * i]; val by = points[2 * i + 1]
+            val ex = bx - ax; val ey = by - ay
+            val t = (((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey + 1e-6f)).coerceIn(0f, 1f)
+            best = minOf(best, hypot(x - ax - t * ex, y - ay - t * ey))
+        }
+        return best
+    }
+
+    /** Brillo 0..1 de un punto redondo del separador ":" de radio [COLON_RADIUS], centrado en [dot]. */
+    private fun colonDot(x: Float, y: Float, dot: FloatArray): Float =
+        (1f - hypot(x - dot[0], y - dot[1]) / COLON_RADIUS).coerceIn(0f, 1f)
 
     /**
      * Mirada en reposo: tanh de un seno se queda en cada lado y cruza rapido.

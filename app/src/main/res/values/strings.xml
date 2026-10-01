@@ -37,7 +37,6 @@
     <string name="pulse_permission">Tap to grant audio permission</string>
     <string name="pulse_rest">rest</string>
     <string name="rest_center">center</string>
-    <string name="rest_human_eye">eye</string>
     <string name="rest_cat_eye">cat</string>
     <string name="rest_logo">logo</string>
     <string name="rest_boom">boom</string>
@@ -45,6 +44,7 @@
     <string name="rest_melt">melt</string>
     <string name="rest_pieces">pieces</string>
     <string name="rest_vanish">darkness</string>
+    <string name="rest_clock">clock</string>
 
     <!-- Pantalla de pulse -->
     <string name="pulse_customize">> customize</string>

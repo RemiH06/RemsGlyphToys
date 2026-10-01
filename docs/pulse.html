@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>pulse · Rem's Glyph Toys</title>
-<meta name="description" content="Cómo funciona pulse: del audio de salida del sistema a tres figuras anidadas en la Glyph Matrix, con todas sus fórmulas.">
+<meta name="description" content="Cómo funciona pulse: del audio de salida del sistema a figuras personalizables en la Glyph Matrix, con bombo, línea melódica y reposos, con todas sus fórmulas.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|vt323:400&display=swap" rel="stylesheet">
@@ -166,7 +166,8 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap">
     <p class="muted"><a href="index.html">← rem's glyph toys</a></p>
     <h1>PULSE<br><span class="dim">a detalle</span></h1>
-    <p style="max-width:62ch;margin-top:14px">Cómo pulse convierte el audio que suena en el teléfono en tres figuras anidadas sobre la Glyph Matrix: de dónde sale el sonido, cómo se separa, qué fórmula mueve cada figura y cómo se decidió cada una. Todas las constantes son las del código (<code>SpectrumAnalysis</code>, <code>AudioSpectrumSource</code> y <code>AudioBlobSimulation</code>).</p>
+    <p style="max-width:62ch;margin-top:14px">Cómo pulse convierte el audio que suena en el teléfono en figuras sobre la Glyph Matrix: de dónde sale el sonido, cómo se separa, qué fórmula mueve cada figura y cómo se decidió cada una. Incluye el cuarto anillo del bombo, la compuerta de línea melódica y los reposos y figuras que se eligen en la app. Todas las constantes son las del código (<code>SpectrumAnalysis</code>, <code>AudioSpectrumSource</code> y <code>AudioBlobSimulation</code>).</p>
+    <div class="callout violet"><div class="callout-title">personalización</div><p>Desde la versión 1.1, cada familia tiene una figura alternativa y el bombo tres estilos, y el reposo (qué se ve en silencio) se elige entre diez opciones; todo en una pantalla propia dentro de la app (<b>pulse → personalizar</b>), no en este documento. Las fórmulas de esta página describen el motor: la energía, la dureza, el bombo y la línea melódica se calculan igual sin importar qué figura o reposo esté activo.</p></div>
   </div>
 </header>
 
@@ -203,7 +204,11 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       <div class="timeline-item"><div class="timeline-dot">05</div><p><b>Formas.</b> La matriz no tiene color, solo brillo: cada familia se reconoce por su silueta (hexágono, diamante, triángulo).</p></div>
       <div class="timeline-item"><div class="timeline-dot">06</div><p><b>Blobs curvos y capas logarítmicas.</b> Los polígonos rectos se veían rígidos: se cambiaron por el armónico principal de cada polígono. El tamaño pasó a una escala logarítmica para que la que más suena siempre quede afuera.</p></div>
       <div class="timeline-item"><div class="timeline-dot">07</div><p><b>Dureza.</b> La forma responde a la armonía: suave se redondea, áspero o brusco saca puntas.</p></div>
-      <div class="timeline-item"><div class="timeline-dot now">08</div><p><b>Base por familia.</b> El hexágono vivía con puntas porque cada cambio de nota del bajo contaba como golpe; ahora cada familia se mide contra su propio nivel habitual.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">08</div><p><b>Base por familia.</b> El hexágono vivía con puntas porque cada cambio de nota del bajo contaba como golpe; ahora cada familia se mide contra su propio nivel habitual.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">09</div><p><b>Cuarto anillo: el bombo.</b> Un golpe es un brinco del contraste de 35–180 Hz contra el resto del espectro, resistente a los saltos de ganancia automática del Visualizer. Probó tres formas: un blob que entra desde fuera de la matriz, una bolita que el centro lanza al borde, y una onda que se abre mientras dura el bombo.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">10</div><p><b>Compuerta de línea melódica.</b> El diamante crecía igual con un acorde sostenido que con una voz: ahora solo se abre de verdad cuando la banda de voces tiene una sola fundamental con sus armónicos, no varias notas a la vez.</p></div>
+      <div class="timeline-item"><div class="timeline-dot">11</div><p><b>Reposos.</b> Sin audio las tres figuras solo colapsaban al centro; ahora el reposo es elegible: un ojo entrecerrado, la pupila de un gato, el logo de la app, el bombo quieto en su máximo, una plomada que apunta al suelo, agua que se derrite y se reconstruye, piezas sólidas que caen y chocan, o oscuridad total.</p></div>
+      <div class="timeline-item"><div class="timeline-dot now">12</div><p><b>Figuras elegibles.</b> Cada familia gana una silueta alternativa (pentágono, almendra, círculo), para que el reposo de ojo y el de gato puedan armarse con las figuras normales de pulse en vez de piezas aparte.</p></div>
     </div>
   </div>
 </section>
@@ -329,6 +334,46 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   </div>
 </section>
 
+<!-- ── Bombo ───────────────────────────────────────────────────── -->
+<section class="level alt" id="bombo">
+  <div class="wrap">
+    <h2>Golpes de bombo</h2>
+    <p>Un cuarto anillo, aparte de las tres familias, reacciona a los golpes del bombo (35–180 Hz). La trampa: el Visualizer ajusta la ganancia de cada captura en saltos de ×2, y cada salto sube todo el espectro por igual, igual que un golpe real. La solución es medir el <b>contraste</b> de esa banda contra el resto del espectro, que no cambia con esos saltos:</p>
+    <div class="formula"><var>contraste</var> <span class="op">=</span> ln( (<var>P</var><sub>bombo</sub> <span class="op">+</span> φ) / (<var>P</var><sub>resto</sub> <span class="op">+</span> φ) ),&nbsp;&nbsp; φ <span class="op">=</span> <span class="c">0.05</span> · <var>P</var><sub>total</sub> <span class="op">+</span> 1<br>
+      golpe <span class="op">⇔</span> <var>L</var> <span class="op">≥</span> <span class="c">0.02</span> ∧ Δcontraste <span class="op">&gt;</span> <span class="c">1.0</span> ∧ Δ ln(<var>P</var><sub>bombo</sub>) <span class="op">&gt;</span> <span class="c">0.5</span> ∧ <var>P</var><sub>bombo</sub>/<var>P</var><sub>total</sub> <span class="op">&gt;</span> <span class="c">0.35</span> ∧ <var>t</var> <span class="op">&gt;</span> <span class="c">0.15</span> s desde el ultimo
+      <span class="note">P: potencia (suma de M<sub>k</sub>²). φ es un piso: sin él, cuando casi nada suena fuera de la banda, cualquier fuga de la FFT se leería como un brinco enorme. Δ es contra un valle que baja rápido con la cola del golpe (τ = 0.06 s) y sube lento con lo sostenido (τ = 0.5 s), así un bajo largo deja de contar como golpe en ~1 s. El requisito de potencia propia (no solo contraste) evita que una nota nueva del bajo, que también sube de golpe, cuente como bombo.</span></div>
+    <p>Un golpe detectado solo se confirma si, en los siguientes 0.25 s, el contraste vuelve a caer al menos 0.7 (≈ a la mitad): así una nota de bajo que se queda arriba no se cuenta, pero sí un golpe que decae como un golpe.</p>
+    <div class="formula"><var>R</var> <span class="op">←</span> <var>R</var> · e<sup>−Δt/2.5</sup> <span class="op">+</span> [confirmado]&nbsp;&nbsp;&nbsp; abierto <span class="op">⇔</span> <var>R</var> <span class="op">&gt;</span> <span class="c">2.0</span> (se cierra solo bajo <span class="c">1.3</span>)
+      <span class="note">R: conteo con memoria de 2.5 s. La histéresis entre 1.3 y 2.0 evita que "¿tiene bombo?" parpadee cuando el conteo ronda el umbral; con bombo constante tarda ~1.1 s en abrirse y ~1 s en cerrarse tras el último golpe.</span></div>
+    <p class="muted">El anillo tiene tres estilos elegibles en la app: <b>blob afuera</b> entra desde fuera de la matriz con cada golpe y se retira sin bombo; <b>blob adentro</b> es una bolita que cada golpe lanza al borde y regresa tenue; <b>onda</b> se abre hasta el borde mientras "¿tiene bombo?" es cierto y solo destella con cada golpe.</p>
+  </div>
+</section>
+
+<!-- ── Linea melodica ──────────────────────────────────────────── -->
+<section class="level" id="melodia">
+  <div class="wrap">
+    <h2>Línea melódica</h2>
+    <p>El diamante (voces) crecía igual con una voz que con un acorde sostenido o una guitarra rasgueada, porque sus bandas solo miden energía. Antes de dejarlo crecer, se pregunta si hay una <b>línea melódica</b>: una sola nota con sus armónicos, de 150 Hz a 2.5 kHz.</p>
+    <div class="formula">puntaje(<var>f</var><sub>0</sub>) <span class="op">=</span> clamp( (captura(<var>f</var><sub>0</sub>)/<var>P</var> <span class="op">−</span> cobertura) / (1 <span class="op">−</span> cobertura), 0, 1 )
+      <span class="note">captura(f₀): potencia en los armónicos de f₀ (±1 bin si están separados, el bin más cercano si no). cobertura: qué fracción de la banda ocupan esos armónicos. Se resta la cobertura para que un espectro plano dé 0: sin esto, un acorde mayor caía casi entero en los armónicos de una fundamental imaginaria una octava abajo, donde no suena nada.</span></div>
+    <p>Candidatas a fundamental: el pico más fuerte de la banda, y su 2º a 6º armónico hacia abajo (una voz grave suele tener el pico en un armónico, no en la fundamental), cada una con energía propia y afinada en ±3 %:</p>
+    <div class="formula"><var>M</var> <span class="op">=</span> max<sub>divisor ∈ [1,6], paso ∈ [−6,6]</sub> puntaje( pico/divisor · (1 <span class="op">+</span> <span class="c">0.005</span>·paso) ), si el bin de esa fundamental tiene <span class="op">≥</span> <span class="c">0.2</span> · pico
+      <span class="note">Sin el requisito de energía propia, un acorde mayor volvía a puntuar alto: sus notas caen en los armónicos de esa fundamental imaginaria, aunque ahí mismo no suene nada.</span></div>
+    <div class="formula"><var>linea</var> <span class="op">=</span> smooth( <span class="c">0.32</span>, <span class="c">0.46</span>, promedio(<var>M</var>, τ <span class="op">=</span> <span class="c">0.5</span> s) )&nbsp;&nbsp;&nbsp; <var>e</var><sub>voces</sub> <span class="op">·=</span> lerp(<span class="c">0.35</span>, 1, <var>linea</var>)
+      <span class="note">Se promedia medio segundo antes del umbral: decide la tendencia, no un cuadro suelto que brinca en mitad de un acorde. Sin línea melódica el diamante se queda al 35 % de su energía normal, no en 0: una guitarra o un piano aún se nota un poco.</span></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Escenario sintético</th><th>Línea melódica</th></tr></thead>
+      <tbody>
+        <tr><td>voz aguda y voz grave, con vibrato</td><td class="num">0.9–1.0</td></tr>
+        <tr><td>silbido, flauta</td><td class="num">0.9–1.0</td></tr>
+        <tr><td>voz sobre un acorde de fondo</td><td class="num">1.0</td></tr>
+        <tr><td>guitarra rasgueada, piano, pad sostenido (acordes)</td><td class="num">0.0</td></tr>
+        <tr><td>ruido blanco</td><td class="num">0.0</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
 <!-- ── Movimiento y LEDs ───────────────────────────────────────── -->
 <section class="level alt" id="movimiento">
   <div class="wrap">
@@ -351,8 +396,41 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   </div>
 </section>
 
+<!-- ── Personalizacion ─────────────────────────────────────────── -->
+<section class="level" id="personalizacion">
+  <div class="wrap">
+    <h2>Figuras y reposos</h2>
+    <p>Elegibles en <b>pulse → personalizar</b>, dentro de la app; se guardan y el toy los toma al instante, sin reiniciarlo.</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Familia</th><th>Normal</th><th>Alternativa</th></tr></thead>
+      <tbody>
+        <tr><td>graves</td><td>hexágono</td><td>pentágono</td></tr>
+        <tr><td>voces</td><td>diamante</td><td>almendra: ancho fijo, con puntas; lo que suena solo la abre y cierra, nunca la alarga</td></tr>
+        <tr><td>agudos</td><td>triángulo</td><td>círculo: sin vértices; con sonido áspero le salen 8 puntas cortas alrededor</td></tr>
+        <tr><td>bombo</td><td colspan="2">blob afuera · blob adentro · onda (ver <a href="#bombo">golpes de bombo</a>)</td></tr>
+      </tbody>
+    </table></div>
+    <p>El reposo es lo que se ve sin audio o con el volumen muy bajo; la transición sigue al volumen real igual que las demás animaciones de pulse (subida rápida, bajada lenta).</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Reposo</th><th>Qué se ve en silencio</th></tr></thead>
+      <tbody>
+        <tr><td>centro</td><td>las tres figuras colapsan al centro (el comportamiento original)</td></tr>
+        <tr><td>gato</td><td>del tamaño de la matriz: el hexágono crece hasta el tope (la iris), el diamante se vuelve una rendija vertical con puntas (la pupila) que mira de un lado a otro, y el triángulo queda chico en medio (un brillo)</td></tr>
+        <tr><td>logo</td><td>las tres figuras regulares, una dentro de otra con las proporciones del logo de la app, cada una girando lento a su ritmo</td></tr>
+        <tr><td>boom</td><td>el anillo del bombo se queda adentro, quieto en su máximo y girando lento; las tres figuras se pegan al borde, redondas, y se camuflan en él</td></tr>
+        <tr><td>plomada</td><td>el triángulo crece y apunta siempre hacia abajo (con un resorte que lo hace oscilar al girar el teléfono); el hexágono y el diamante quedan tenues como marco</td></tr>
+        <tr><td>derretir</td><td>las figuras se vuelven agua (la FLIP de <a href="index.html#fluid">fluid</a>) que cae con la gravedad; al volver la música, el agua primero se reparte pegada al borde y luego se reconstruye en las figuras, en dos segundos</td></tr>
+        <tr><td>piezas</td><td>las figuras caen como polígonos regulares sólidos que chocan entre sí y contra el borde, con fricción y giro; al volver la música, cada pieza se transforma de vuelta en su figura en dos segundos</td></tr>
+        <tr><td>oscuridad</td><td>todo se apaga; con música todo vuelve desvaneciéndose</td></tr>
+        <tr><td>reloj</td><td>el contorno de cada figura se convierte, punto por punto, en los trazos de la hora (HH:MM, 24 horas): el hexágono las decenas de la hora, el diamante las unidades de la hora y las decenas de los minutos (mitad de su contorno cada una) y el triángulo las unidades de los minutos; con música vuelven a sus figuras por el mismo camino</td></tr>
+      </tbody>
+    </table></div>
+    <div class="callout warn"><div class="callout-title">fuera de esta página</div><p>La plomada, derretir y piezas usan el acelerómetro (solo mientras ese reposo está elegido); los demás no. Las fórmulas exactas de cada reposo viven en <code>AudioBlobSimulation</code> y <code>SolidPieces</code>, no aquí: son sobre todo decisiones visuales, no modelos del sonido.</p></div>
+  </div>
+</section>
+
 <!-- ── Verificacion ────────────────────────────────────────────── -->
-<section class="level" id="verificacion">
+<section class="level alt" id="verificacion">
   <div class="wrap">
     <h2>Verificación</h2>
     <p><code>SpectrumAnalysisTest</code> genera audio sintético y le aplica una FFT sin ventana, cuantizada a 8 bits, como la del Visualizer: bloques de 1024 muestras a 44.1 kHz, un cuadro cada 33 ms, 8 s por escena, promediando el último segundo.</p>
@@ -370,9 +448,12 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       </tbody>
     </table></div>
     <p class="muted">Las formas se revisaron además renderizando la simulación cuadro por cuadro en escenas sintéticas (instrumental, solo voces, mezcla) antes de probarlas en el teléfono.</p>
+    <p><code>KickDetectionTest</code> y <code>MelodyDetectionTest</code> usan el mismo modelo de audio sintético, pero pasado además por <code>VisualizerModel</code>, que imita los saltos de ganancia automática del Visualizer real (potencia en pasos de ×2). Con casas, hip-hop y bombo enterrado bajo la mezcla, el anillo abre o se queda cerrado como se esperaba; con voz, silbido, flauta o guitarra y piano tocando la melodía nota por nota, la línea melódica se detecta, y con acordes sostenidos o ruido no.</p>
     <h3>Límites</h3>
     <ul class="plain">
       <li>La FFT del Visualizer es de 8 bits y ~43 Hz por bin: la aspereza es aproximada, sobre todo en graves.</li>
+      <li>Un bombo completamente solo, sin nada más sonando, no se detecta: el contraste necesita algo contra qué compararse. En una mezcla real casi siempre hay algo más.</li>
+      <li>La línea melódica no distingue una voz de una guitarra o un piano tocando la melodía nota por nota: a los 43 Hz por bin del Visualizer, ambas se ven igual.</li>
       <li>Mide la mezcla completa, no cada instrumento por separado.</li>
       <li>La calibración se hizo con audio sintético; con música real puede pedir ajustes (umbrales de <code>SpectrumAnalysis</code>, <code>LOG_SPREAD</code>, <code>ABSOLUTE_WEIGHT</code>).</li>
       <li>El sistema retira cualquier toy tras su timeout (30 s por default) y al desbloquear o voltear el teléfono.</li>

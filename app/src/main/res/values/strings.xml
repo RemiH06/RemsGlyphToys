@@ -1,9 +1,48 @@
-<resources>
-    <string name="app_name">Rem\'s Glyph Toys</string>
-    <string name="toy_name_fluid">Fluid</string>
-    <string name="toy_summary_fluid">Agua que cae hacia donde inclinas el telefono</string>
-    <string name="toy_name_gallery">Gallery</string>
-    <string name="toy_summary_gallery">Tus fotos y glifos en la matriz. Manten presionado para cambiar</string>
-    <string name="toy_name_pulse">Pulse</string>
-    <string name="toy_summary_pulse">Tres figuras que respiran con el audio que se este reproduciendo</string>
+<!-- Idioma por defecto: ingles. El espanol esta en values-es. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en">
+    <!-- Nombres propios: iguales en todos los idiomas -->
+    <string name="app_name" translatable="false">Rem\'s Glyph Toys</string>
+
+    <!-- Glyph Toys en el carrusel de Nothing -->
+    <string name="toy_name_fluid" translatable="false">Fluid</string>
+    <string name="toy_summary_fluid">Water that falls toward wherever you tilt the phone</string>
+    <string name="toy_name_gallery" translatable="false">Gallery</string>
+    <string name="toy_summary_gallery">Your photos and glyphs on the matrix. Hold to switch</string>
+    <string name="toy_name_pulse" translatable="false">Pulse</string>
+    <string name="toy_summary_pulse">Three shapes that breathe with whatever audio is playing</string>
+
+    <!-- Inicio -->
+    <string name="home_fluid_description">Water simulated with FLIP, like mitxela\'s fluid pendant: it falls toward wherever you tilt the phone. Tap to shake it; on the physical matrix, hold the Glyph button. A long press resets it.</string>
+    <string name="home_gallery_description">Pick the photos you want to see (they\'re averaged down to 25x25) or draw your own glyphs with five brightness levels. They all share the same rotation. Tap the matrix to switch; on the physical matrix, long-press the Glyph button.</string>
+    <string name="home_pulse_description">Three nested shapes that breathe with whatever is playing, through the speaker or headphones: a hexagon for bass, a diamond for vocals and a triangle for highs. The loudest ends up outside, quiet ones rest still at the center, and they only cross when two groups are equally loud. Double-tap to restart it.</string>
+    <string name="home_footer">pick each toy in the Glyph button carousel</string>
+
+    <!-- Gallery y Mis glifos -->
+    <string name="gallery_empty">Pick photos or draw a glyph</string>
+    <string name="gallery_pick">> pick photos</string>
+    <string name="gallery_pick_count">> pick photos · %1$d</string>
+    <string name="gallery_draw">> draw</string>
+    <string name="gallery_my_glyphs">my glyphs · %1$d · tap one to edit it</string>
+    <string name="editor_new">> new glyph</string>
+    <string name="editor_edit">> edit glyph</string>
+    <string name="editor_brush_eraser">brush · eraser</string>
+    <string name="editor_brush_level">brush · %1$d%%</string>
+    <string name="editor_save">> save</string>
+    <string name="editor_cancel">> cancel</string>
+    <string name="editor_clear">> clear</string>
+    <string name="editor_delete">> delete</string>
+    <string name="editor_delete_confirm">> tap again</string>
+
+    <!-- Pulse -->
+    <string name="pulse_permission">Tap to grant audio permission</string>
+    <string name="pulse_rest">rest</string>
+    <string name="rest_center">center</string>
+    <string name="rest_human_eye">eye</string>
+    <string name="rest_cat_eye">cat</string>
+    <string name="rest_logo">logo</string>
+    <string name="rest_boom">boom</string>
+    <string name="rest_plumb">plumb</string>
+    <string name="rest_melt">melt</string>
+    <string name="rest_pieces">pieces</string>
+    <string name="rest_vanish">vanish</string>
 </resources>

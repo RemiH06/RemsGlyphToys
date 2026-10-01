@@ -35,6 +35,8 @@ import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
 import com.irofactory.rgt.ui.components.SherryButton
 import com.irofactory.rgt.ui.theme.sherryColors
 import kotlinx.coroutines.isActive
+import androidx.compose.ui.res.stringResource
+import com.irofactory.rgt.R
 
 /**
  * Vista previa en pantalla del toy pulse. Aqui se pide RECORD_AUDIO: el toy
@@ -99,7 +101,7 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             sim.restPose = restPose
             sim.setGravity(gravity[0], gravity[1])
             sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
-                audioSource.kick, audioSource.kickPresence)
+                audioSource.kick, audioSource.kickPresence, audioSource.melody)
             grid = sim.rasterize()
         }
     }
@@ -125,7 +127,7 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             )
             if (!hasPermission) {
                 Text(
-                    text = "Toca para dar permiso de audio",
+                    text = stringResource(R.string.pulse_permission),
                     style = MaterialTheme.typography.bodySmall,
                     color = sc.text,
                     textAlign = TextAlign.Center,
@@ -138,10 +140,10 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(text = "reposo", style = MaterialTheme.typography.labelSmall, color = sc.text3)
+            Text(text = stringResource(R.string.pulse_rest), style = MaterialTheme.typography.labelSmall, color = sc.text3)
             for (pose in RestPose.entries) {
                 SherryButton(
-                    text = if (pose == restPose) "> ${pose.label}" else pose.label,
+                    text = stringResource(pose.label).let { if (pose == restPose) "> $it" else it },
                     neon = if (pose == restPose) sc.magenta else sc.text3,
                     onClick = {
                         restPose = pose

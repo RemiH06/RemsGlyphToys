@@ -39,6 +39,7 @@ import com.irofactory.rgt.glyphs.GlyphEditor
 import com.irofactory.rgt.ui.theme.RemsGlyphToysTheme
 import com.irofactory.rgt.ui.theme.crtScanlines
 import com.irofactory.rgt.ui.theme.sherryColors
+import androidx.compose.ui.res.stringResource
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,25 +103,25 @@ fun HomeScreen(onEditGlyph: (String?) -> Unit = {}, modifier: Modifier = Modifie
             index = "01",
             name = "fluid",
             neon = sc.cyan,
-            description = "Agua simulada con FLIP, como la fluid pendant de mitxela: cae hacia donde inclines el telefono. Toca para agitarla; en la matriz fisica manten presionado el boton Glyph. Pulsacion larga reinicia."
+            description = stringResource(R.string.home_fluid_description)
         ) { FluidMatrixView() }
 
         ToySection(
             index = "02",
             name = "gallery",
             neon = sc.lime,
-            description = "Elige las fotos que quieres ver (se promedian a 25x25) o dibuja tus propios glifos con cinco intensidades. Todos entran a la misma rotacion. Toca la matriz para cambiar; en la matriz fisica, pulsacion larga del boton Glyph."
+            description = stringResource(R.string.home_gallery_description)
         ) { GalleryMatrixView(onEditGlyph = onEditGlyph) }
 
         ToySection(
             index = "03",
             name = "pulse",
             neon = sc.magenta,
-            description = "Tres figuras anidadas que respiran con lo que se este reproduciendo, por bocina o audifonos: un hexagono para los graves, un diamante para las voces y un triangulo para los agudos. La que mas suena queda afuera, las calladas se quedan quietas en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte. Doble toque para reiniciarla."
+            description = stringResource(R.string.home_pulse_description)
         ) { AudioSphereMatrixView() }
 
         Text(
-            text = "elige cada toy en el carrusel del boton Glyph",
+            text = stringResource(R.string.home_footer),
             style = MaterialTheme.typography.labelSmall,
             color = sc.text3,
             modifier = Modifier.fillMaxWidth()

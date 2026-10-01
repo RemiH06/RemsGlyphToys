@@ -39,6 +39,9 @@ class AudioSpectrumSource(private val context: Context) {
     /** Dureza de graves, medios y agudos, 0f suave .. 1f aspero (ver [SpectrumAnalysis.harshness]). */
     val harshness: FloatArray get() = analysis.harshness
 
+    /** Si hay una linea melodica, 0f..1f (ver [SpectrumAnalysis.melody]). */
+    val melody: Float get() = analysis.melody
+
     /** Golpe de bombo, 1f al golpe y se apaga (ver [SpectrumAnalysis.kick]). */
     val kick: Float get() = analysis.kick
 

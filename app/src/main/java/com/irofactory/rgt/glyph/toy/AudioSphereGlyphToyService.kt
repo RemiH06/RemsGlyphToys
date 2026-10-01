@@ -46,7 +46,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
         sim.restPose = RestPose.load(applicationContext)
         listenGravity(sim.restPose.usesGravity)
         sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
-                audioSource.kick, audioSource.kickPresence)
+                audioSource.kick, audioSource.kickPresence, audioSource.melody)
         return GlyphFrames.fromGrid(sim.rasterize(), mask)
     }
 

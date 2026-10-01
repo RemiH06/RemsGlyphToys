@@ -26,6 +26,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,6 +35,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.irofactory.rgt.audio.AudioSphereMatrixView
+import com.irofactory.rgt.audio.PulseSettingsScreen
+import com.irofactory.rgt.audio.PulseStyle
+import com.irofactory.rgt.audio.RestPose
 import com.irofactory.rgt.fluid.FluidMatrixView
 import com.irofactory.rgt.gallery.GalleryMatrixView
 import com.irofactory.rgt.glyphs.GlyphEditor
@@ -62,33 +67,46 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Inicio o editor de glifos. [NEW_GLYPH] abre uno nuevo; cualquier otro
- * valor es el id del glifo a editar. El inicio conserva su scroll mientras
- * el editor esta abierto.
+ * Inicio, editor de glifos o pantalla de pulse. [NEW_GLYPH] abre un glifo
+ * nuevo; cualquier otro valor es el id del glifo a editar. El inicio conserva
+ * su scroll mientras las otras estan abiertas.
  */
 @Composable
 private fun AppScreens(modifier: Modifier = Modifier) {
     val holder = rememberSaveableStateHolder()
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
+    var customizingPulse by rememberSaveable { mutableStateOf(false) }
     val target = editing
-    if (target == null) {
-        holder.SaveableStateProvider("home") {
-            HomeScreen(onEditGlyph = { editing = it ?: NEW_GLYPH }, modifier = modifier)
-        }
-    } else {
-        GlyphEditor(
+    when {
+        target != null -> GlyphEditor(
             glyphId = target.takeIf { it != NEW_GLYPH },
             onClose = { editing = null },
             modifier = modifier
         )
+        customizingPulse -> PulseSettingsScreen(onClose = { customizingPulse = false }, modifier = modifier)
+        else -> holder.SaveableStateProvider("home") {
+            HomeScreen(
+                onEditGlyph = { editing = it ?: NEW_GLYPH },
+                onCustomizePulse = { customizingPulse = true },
+                modifier = modifier
+            )
+        }
     }
 }
 
 private const val NEW_GLYPH = ""
 
 @Composable
-fun HomeScreen(onEditGlyph: (String?) -> Unit = {}, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    onEditGlyph: (String?) -> Unit = {},
+    onCustomizePulse: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val sc = sherryColors
+    val context = LocalContext.current
+    // Se leen cada vez que se vuelve al inicio, por si cambiaron en la pantalla de pulse
+    val restPose = remember { RestPose.load(context) }
+    val pulseStyle = remember { PulseStyle.load(context) }
 
     Column(
         modifier = modifier
@@ -118,7 +136,7 @@ fun HomeScreen(onEditGlyph: (String?) -> Unit = {}, modifier: Modifier = Modifie
             name = "pulse",
             neon = sc.magenta,
             description = stringResource(R.string.home_pulse_description)
-        ) { AudioSphereMatrixView() }
+        ) { AudioSphereMatrixView(restPose = restPose, style = pulseStyle, onCustomize = onCustomizePulse) }
 
         Text(
             text = stringResource(R.string.home_footer),

@@ -45,4 +45,22 @@
     <string name="rest_melt">melt</string>
     <string name="rest_pieces">pieces</string>
     <string name="rest_vanish">vanish</string>
+
+    <!-- Pantalla de pulse -->
+    <string name="pulse_customize">> customize</string>
+    <string name="pulse_shapes">shapes</string>
+    <string name="family_high">highs</string>
+    <string name="family_mid">vocals</string>
+    <string name="family_low">bass</string>
+    <string name="family_kick">kick</string>
+    <string name="shape_triangle">triangle</string>
+    <string name="shape_circle">circle</string>
+    <string name="shape_diamond">diamond</string>
+    <string name="shape_flat_diamond">flat diamond</string>
+    <string name="shape_hexagon">hexagon</string>
+    <string name="shape_star">star</string>
+    <string name="kick_outside">blob outside</string>
+    <string name="kick_inside">blob inside</string>
+    <string name="kick_wave">wave</string>
+    <string name="settings_back">> back</string>
 </resources>

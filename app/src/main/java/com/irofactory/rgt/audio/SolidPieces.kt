@@ -19,6 +19,9 @@ import kotlin.math.sin
  * choca cada vertice, con impulso y friccion, asi las piezas ruedan y se
  * asientan sobre un lado. Entre piezas se usa un circulo por pieza (a medio
  * camino entre su radio interior y el exterior): aproximado, pero estable.
+ * Como un poligono apoyado en un circulo podria girar sin nada que lo frene,
+ * el contacto entre piezas lleva friccion con los giros de ambas y frena el
+ * giro mientras se tocan.
  * Motor puro, sin dependencias de Android.
  */
 internal class SolidPieces {
@@ -33,6 +36,8 @@ internal class SolidPieces {
         const val FRICTION = 0.4f
         const val SUBSTEPS = 4
         const val THICKNESS = 0.9f
+        // Freno del giro (1/s) mientras dos piezas se tocan
+        const val CONTACT_SPIN_DAMPING = 6f
     }
 
     private class Body(val sides: Int, val radius: Float, val startX: Float, val startY: Float) {
@@ -76,10 +81,14 @@ internal class SolidPieces {
                 b.y += b.vy * h
                 b.angle += b.spin * h
             }
-            for (i in bodies.indices) for (j in i + 1 until bodies.size) collide(bodies[i], bodies[j])
+            for (i in bodies.indices) for (j in i + 1 until bodies.size) collide(bodies[i], bodies[j], h)
             for (b in bodies) hitWall(b)
         }
     }
+
+    /** Estado de cada pieza (hexagono, diamante, triangulo): x, y, angulo, radio y lados. */
+    fun snapshot(): Array<FloatArray> =
+        Array(bodies.size) { i -> bodies[i].let { floatArrayOf(it.x, it.y, it.angle, it.radius, it.sides.toFloat()) } }
 
     /** Brillo 0..1 de las tres siluetas en (x, y), mezcladas tipo "screen". */
     fun brightness(x: Float, y: Float): Float {
@@ -123,7 +132,7 @@ internal class SolidPieces {
         }
     }
 
-    private fun collide(a: Body, b: Body) {
+    private fun collide(a: Body, b: Body, h: Float) {
         val dx = b.x - a.x
         val dy = b.y - a.y
         val d = hypot(dx, dy)
@@ -139,14 +148,29 @@ internal class SolidPieces {
         b.x += nx * overlap * ib / (ia + ib)
         b.y += ny * overlap * ib / (ia + ib)
         val vRel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny
-        if (vRel >= 0f) return
-        val j = -(1f + RESTITUTION) * vRel / (ia + ib)
-        a.vx -= j * nx * ia; a.vy -= j * ny * ia
-        b.vx += j * nx * ib; b.vy += j * ny * ib
-        // Roce tangencial: un poco de giro opuesto en cada una
-        val vt = -(b.vx - a.vx) * ny + (b.vy - a.vy) * nx
-        a.spin += 0.15f * vt / a.radius
-        b.spin -= 0.15f * vt / b.radius
+        val jn = if (vRel < 0f) -(1f + RESTITUTION) * vRel / (ia + ib) else 0f
+        a.vx -= jn * nx * ia; a.vy -= jn * ny * ia
+        b.vx += jn * nx * ib; b.vy += jn * ny * ib
+
+        // Friccion en el punto de contacto, con el giro de las dos. En reposo no
+        // hay impulso normal: el limite usa el del peso en este subpaso
+        val tx = -ny
+        val ty = nx
+        val ra = a.reach
+        val rb = -b.reach
+        val vt = (b.vx - a.vx) * tx + (b.vy - a.vy) * ty + b.spin * rb - a.spin * ra
+        val k = ia + ib + ra * ra / a.inertia + rb * rb / b.inertia
+        val reducedMass = 1f / (ia + ib)
+        val limit = FRICTION * maxOf(jn, reducedMass * 9.81f * GRAVITY_SCALE * h)
+        val jt = (vt / k).coerceIn(-limit, limit)
+        a.vx += jt * tx * ia; a.vy += jt * ty * ia
+        b.vx -= jt * tx * ib; b.vy -= jt * ty * ib
+        a.spin += jt * ra / a.inertia
+        b.spin -= jt * rb / b.inertia
+
+        val brake = exp(-CONTACT_SPIN_DAMPING * h)
+        a.spin *= brake
+        b.spin *= brake
     }
 
     /** Distancia de (x, y) a la silueta del poligono. */

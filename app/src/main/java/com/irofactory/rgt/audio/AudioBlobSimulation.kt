@@ -74,7 +74,11 @@ import kotlin.random.Random
  *     fluid) que cae hacia el suelo.
  *   - piezas: las figuras como poligonos regulares solidos que caen y chocan
  *     entre si ([SolidPieces]).
- * Los tres ultimos usan la gravedad de [setGravity].
+ *   - desaparecer: todo se apaga y, con la musica, vuelve desvaneciendose.
+ * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
+ * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
+ * cada particula viaja a un punto del contorno de su figura, y cada pieza se
+ * mueve, crece y pasa de poligono al contorno vivo.
  */
 class AudioBlobSimulation {
 
@@ -99,6 +103,9 @@ class AudioBlobSimulation {
         const val CLEARANCE = 0.8f
         // Largo maximo de las puntas con dureza total, relativo al tamano de la figura
         const val SPIKE = 0.45f
+        // Energia del diamante sin linea melodica (instrumental): sus bandas tienen
+        // su propio control de ganancia y sin esto crece igual con guitarra o piano
+        const val MID_WITHOUT_MELODY = 0.35f
 
         // Experimento: anillo del bombo. false lo quita por completo
         const val KICK_RING = true
@@ -158,10 +165,12 @@ class AudioBlobSimulation {
         // desde el que un LED de las figuras ya es agua con densidad completa,
         // y brillo del agua y las piezas
         const val SOLIDIFY = 0.85f
-        const val REFORM = 0.95f
+        const val REFORM = 0.9f
         const val MELT_FULL = 0.15f
         const val MELT_LEVEL = 0.45f
         const val PIECES_LEVEL = 0.5f
+        // Segundos que tardan el agua o las piezas en volver a ser las figuras
+        const val REFORM_TIME = 2f
         // Volumen con el que el reposo empieza a deshacerse y con el que ya no queda nada
         const val EYE_OPEN_FROM = 0.03f
         const val EYE_OPEN_TO = 0.3f
@@ -270,9 +279,17 @@ class AudioBlobSimulation {
     @Volatile private var gravityY = 9.81f
     private var plumbSpin = 0f
 
-    // Derretir y piezas: si ya cambiaron de estado y cuanto se ven (0 = figuras, 1 = agua o piezas)
+    // Derretir, piezas y desaparecer: si ya cambiaron de estado y cuanto se ven
+    // (0 = figuras, 1 = agua, piezas o nada)
     private var transformed = false
     private var transformedShown = 0f
+    // Reconstruccion: avance 0..1 (< 0 = no se esta reconstruyendo), de donde
+    // sale cada particula, a que figura va y en que angulo; y estado de las piezas
+    private var reform = -1f
+    private var reformFrom = FloatArray(0)
+    private var reformRing = IntArray(0)
+    private var reformAngle = FloatArray(0)
+    private var reformPieces = emptyArray<FloatArray>()
     private val fluid by lazy { FlipFluidSimulation() }
     private val pieces by lazy { SolidPieces() }
     private val meltRandom = Random(5)
@@ -282,19 +299,20 @@ class AudioBlobSimulation {
     private val isEye get() = restPose == RestPose.HUMAN_EYE || restPose == RestPose.CAT_EYE
     private val lid = FloatArray(EYE_POINTS * 2)
 
-    /**
-     * [bands] son las 6 bandas y [harshness] la dureza de graves, medios y
-     * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
-     * [kick] y [kickPresence] mueven el anillo del bombo.
-     */
     /** Aceleracion del telefono en m/s², ya en ejes de la matriz (y hacia abajo). */
     fun setGravity(x: Float, y: Float) {
         gravityX = x
         gravityY = y
     }
 
+    /**
+     * [bands] son las 6 bandas y [harshness] la dureza de graves, medios y
+     * agudos, ambas de SpectrumAnalysis; [loud] el volumen real 0..1.
+     * [kick] y [kickPresence] mueven el anillo del bombo; [melody] (si hay voz,
+     * silbido o viento) deja crecer al diamante.
+     */
     fun step(dt: Float, bands: FloatArray, loud: Float, harshness: FloatArray,
-             kick: Float = 0f, kickPresence: Float = 0f) {
+             kick: Float = 0f, kickPresence: Float = 0f, melody: Float = 1f) {
         time += dt
         loudness = loud
 
@@ -357,7 +375,7 @@ class AudioBlobSimulation {
 
         low.energy = 0.6f * bands[1] + 0.4f * bands[0]
         low.lobeLevel[0] = bands[0]; low.lobeLevel[1] = bands[1]
-        mid.energy = 0.4f * bands[2] + 0.6f * bands[3]
+        mid.energy = (0.4f * bands[2] + 0.6f * bands[3]) * lerp(MID_WITHOUT_MELODY, 1f, melody)
         mid.lobeLevel[0] = bands[2]; mid.lobeLevel[1] = bands[3]
         high.energy = 0.55f * bands[4] + 0.45f * bands[5]
         high.lobeLevel[0] = bands[4]; high.lobeLevel[1] = bands[5]
@@ -386,8 +404,8 @@ class AudioBlobSimulation {
                 RestPose.LOGO -> lerp(LOGO_SIZE[i], target, awake)
                 RestPose.BOOM -> lerp(BOOM_SIZE[i], target, awake)
                 RestPose.PLUMB -> lerp(PLUMB_SIZE[i], target, awake)
-                // Ocultas mientras son agua o piezas: reposo normal, para volver desde el centro
-                RestPose.MELT, RestPose.PIECES -> target
+                // Ocultas mientras son agua, piezas o nada: reposo normal, para volver desde el centro
+                RestPose.MELT, RestPose.PIECES, RestPose.VANISH -> target
             }
             ring.size += (target - ring.size) * sizeFollow
 
@@ -480,13 +498,18 @@ class AudioBlobSimulation {
             levels[1] *= lerp(1f, PLUMB_FRAME, rest)
             levels[2] *= lerp(1f, 1.6f, rest)
         }
-        // Mientras son agua o piezas, las figuras no se ven
-        val ringsShown = 1f - transformedShown
+        // Mientras son agua o piezas (o se reconstruyen), las figuras no se ven
+        val fullLevels = levels.copyOf()
+        val reforming = reform >= 0f
+        val ringsShown = if (reforming) 0f else 1f - transformedShown
         for (i in levels.indices) levels[i] *= ringsShown
-        val fluidGrid = if (restPose == RestPose.MELT && transformedShown > 0.001f) fluid.rasterize() else null
+        val fluidGrid = if (restPose == RestPose.MELT && transformedShown > 0.001f && !reforming) fluid.rasterize() else null
+        val ease = smoothstep(0f, 1f, reform)
+        val particleGrid = if (reforming && restPose == RestPose.MELT) reformParticles(ease, fullLevels) else null
         // Tenue en reposo y al regresar; solo el golpe destella
         var kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
         if (restPose == RestPose.BOOM) kickLevel += (BOOM_LEVEL * light - kickLevel) * (1f - awake)
+        if (restPose == RestPose.VANISH) kickLevel *= ringsShown
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash)
         val eyeClosed = if (isEye) 1f - awake else 0f
         if (eyeClosed > 0.001f) buildLid(eyeClosed)
@@ -518,7 +541,12 @@ class AudioBlobSimulation {
                         else kickShape(hypot(x, y), kickThickness)
                     dark *= 1f - shape * kickLevel
                 }
-                if (transformedShown > 0.001f) {
+                if (reforming) {
+                    if (particleGrid != null) dark *= 1f - particleGrid[row][col]
+                    if (restPose == RestPose.PIECES) for (i in rings.indices) {
+                        dark *= 1f - morphRim(x, y, reformPieces[i], rings[i], ease) * lerp(PIECES_LEVEL, fullLevels[i], ease)
+                    }
+                } else if (transformedShown > 0.001f) {
                     if (fluidGrid != null) dark *= 1f - fluidGrid[row][col] * MELT_LEVEL * transformedShown
                     if (restPose == RestPose.PIECES) dark *= 1f - pieces.brightness(x, y) * PIECES_LEVEL * transformedShown
                 }
@@ -591,16 +619,25 @@ class AudioBlobSimulation {
     }
 
     /**
-     * Derretir y piezas: con el silencio las figuras se vuelven agua o piezas
-     * (una vez, tal como estaban) y al volver la musica regresan las figuras.
-     * Cambian al bajar de SOLIDIFY y regresan solo al volver arriba de REFORM:
-     * con un solo umbral parpadearian en cuanto el volumen ronde ese valor.
+     * Derretir, piezas y desaparecer: con el silencio las figuras se vuelven
+     * agua o piezas (una vez, tal como estaban) o se apagan, y al volver la
+     * musica regresan: reconstruyendose desde el agua o las piezas, o
+     * desvaneciendose en desaparecer. Cambian al bajar de SOLIDIFY y regresan
+     * solo al volver arriba de REFORM: con un solo umbral parpadearian en
+     * cuanto el volumen ronde ese valor.
      */
     private fun stepTransformation(dt: Float) {
-        val transforms = restPose == RestPose.MELT || restPose == RestPose.PIECES
+        val transforms = restPose == RestPose.MELT || restPose == RestPose.PIECES || restPose == RestPose.VANISH
         if (!transforms) {
             transformed = false
             transformedShown = 0f
+            reform = -1f
+            return
+        }
+        if (reform >= 0f) {
+            // Una reconstruccion siempre termina; si volvio el silencio, despues se transforma otra vez
+            reform += dt / REFORM_TIME
+            if (reform >= 1f) reform = -1f
             return
         }
         if (!transformed && awake < SOLIDIFY) {
@@ -615,10 +652,15 @@ class AudioBlobSimulation {
             }
         } else if (transformed && awake > REFORM) {
             transformed = false
+            if (restPose != RestPose.VANISH) {
+                startReform()
+                transformedShown = 0f
+                return
+            }
         }
         val target = if (transformed) 1f else 0f
         transformedShown += (target - transformedShown) * (1f - exp(-dt / 0.25f))
-        if (transformedShown > 0.001f) {
+        if (transformedShown > 0.001f && restPose != RestPose.VANISH) {
             if (restPose == RestPose.MELT) {
                 fluid.setGravity(gravityX, gravityY)
                 fluid.step(dt)
@@ -646,6 +688,85 @@ class AudioBlobSimulation {
             }
         }
         return points.toFloatArray()
+    }
+
+    /**
+     * Arranca la reconstruccion. Agua: las particulas mas lejanas del centro van
+     * a la figura mas grande, en proporcion a su tamano, y cada una al angulo
+     * desde el que ya la ve: viajan casi en linea recta. Piezas: se guarda
+     * donde quedo cada una.
+     */
+    private fun startReform() {
+        reform = 0f
+        if (restPose == RestPose.PIECES) {
+            reformPieces = pieces.snapshot()
+            return
+        }
+        val p = fluid.positions()
+        val count = p.size / 2
+        reformFrom = p
+        reformRing = IntArray(count)
+        reformAngle = FloatArray(count)
+        val order = (0 until count).sortedByDescending { hypot(p[2 * it] - center, p[2 * it + 1] - center) }
+        val bySize = rings.indices.sortedByDescending { rings[it].size }
+        val total = rings.sumOf { it.size.toDouble() }.toFloat()
+        var k = 0
+        for ((rank, r) in bySize.withIndex()) {
+            val share = if (rank == bySize.lastIndex) count - k else (count * rings[r].size / total).toInt()
+            repeat(share) {
+                val i = order[k++]
+                reformRing[i] = r
+                reformAngle[i] = atan2(p[2 * i + 1] - center - rings[r].y, p[2 * i] - center - rings[r].x)
+            }
+        }
+    }
+
+    /**
+     * Brillo de las particulas en vuelo: cada una va de donde estaba a su
+     * punto en el contorno vivo de su figura. Cuenta por LED con el brillo de
+     * su figura, asi al llegar se ve igual que la figura que la reemplaza.
+     */
+    private fun reformParticles(ease: Float, levels: FloatArray): Array<FloatArray> {
+        val count = Array(n) { FloatArray(n) }
+        val level = Array(n) { FloatArray(n) }
+        for (i in reformRing.indices) {
+            val ring = rings[reformRing[i]]
+            val theta = reformAngle[i]
+            val radius = ring.radius(theta)
+            val x = lerp(reformFrom[2 * i], center + ring.x + radius * cos(theta), ease)
+            val y = lerp(reformFrom[2 * i + 1], center + ring.y + radius * sin(theta), ease)
+            val col = x.toInt()
+            val row = y.toInt()
+            if (row !in 0 until n || col !in 0 until n) continue
+            count[row][col] += 1f
+            level[row][col] = maxOf(level[row][col], lerp(MELT_LEVEL, levels[reformRing[i]], ease))
+        }
+        for (row in 0 until n) for (col in 0 until n) {
+            count[row][col] = level[row][col] * (count[row][col] / 3f).coerceAtMost(1f)
+        }
+        return count
+    }
+
+    /**
+     * Contorno de una pieza a medio camino de su figura: centro, tamano y
+     * forma van del poligono regular (donde quedo la pieza) al contorno vivo.
+     * [piece]: x, y, angulo, radio y lados, como [SolidPieces.snapshot].
+     */
+    private fun morphRim(x: Float, y: Float, piece: FloatArray, ring: Ring, ease: Float): Float {
+        val cx = lerp(piece[0], ring.x, ease)
+        val cy = lerp(piece[1], ring.y, ease)
+        val dx = x - cx
+        val dy = y - cy
+        val theta = atan2(dy, dx)
+        // Poligono regular en polares: la apotema entre el coseno del angulo al medio de su lado
+        val sides = piece[4]
+        val segment = 2f * PI_F / sides
+        var phi = (theta - piece[2]) % segment
+        if (phi < 0f) phi += segment
+        val polygon = piece[3] * cos(PI_F / sides) / cos(phi - segment / 2f)
+        val radius = lerp(polygon, ring.radius(theta), ease)
+        val thickness = lerp(0.9f, ring.thickness, ease)
+        return (1f - abs(hypot(dx, dy) - radius) / thickness).coerceIn(0f, 1f)
     }
 
     private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t

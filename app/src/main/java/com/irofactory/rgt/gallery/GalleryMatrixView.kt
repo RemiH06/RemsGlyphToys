@@ -37,6 +37,8 @@ import com.irofactory.rgt.ui.theme.sherryColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.stringResource
+import com.irofactory.rgt.R
 
 /**
  * GalleryMatrixView
@@ -104,7 +106,7 @@ fun GalleryMatrixView(onEditGlyph: (String?) -> Unit, modifier: Modifier = Modif
             )
             if (count == 0) {
                 Text(
-                    text = "Elige fotos o dibuja un glifo",
+                    text = stringResource(R.string.gallery_empty),
                     style = MaterialTheme.typography.bodySmall,
                     color = sc.text,
                     textAlign = TextAlign.Center,
@@ -114,11 +116,11 @@ fun GalleryMatrixView(onEditGlyph: (String?) -> Unit, modifier: Modifier = Modif
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SherryButton(
-                text = if (photoCount > 0) "> elegir fotos · $photoCount" else "> elegir fotos",
+                text = if (photoCount > 0) stringResource(R.string.gallery_pick_count, photoCount) else stringResource(R.string.gallery_pick),
                 neon = sc.lime,
                 onClick = openPicker
             )
-            SherryButton(text = "> dibujar", neon = sc.lime, onClick = { onEditGlyph(null) })
+            SherryButton(text = stringResource(R.string.gallery_draw), neon = sc.lime, onClick = { onEditGlyph(null) })
         }
         if (glyphs.isNotEmpty()) {
             Column(
@@ -126,7 +128,7 @@ fun GalleryMatrixView(onEditGlyph: (String?) -> Unit, modifier: Modifier = Modif
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "mis glifos · ${glyphs.size} · toca uno para editarlo",
+                    text = stringResource(R.string.gallery_my_glyphs, glyphs.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = sc.text3
                 )

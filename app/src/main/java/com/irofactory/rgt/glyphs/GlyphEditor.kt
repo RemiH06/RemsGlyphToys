@@ -32,6 +32,8 @@ import com.irofactory.rgt.glyph.GlyphFrames
 import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
 import com.irofactory.rgt.ui.components.SherryButton
 import com.irofactory.rgt.ui.theme.sherryColors
+import androidx.compose.ui.res.stringResource
+import com.irofactory.rgt.R
 
 /**
  * GlyphEditor
@@ -91,7 +93,7 @@ fun GlyphEditor(glyphId: String?, onClose: () -> Unit, modifier: Modifier = Modi
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text(
-            text = if (original == null) "> nuevo glifo" else "> editar glifo",
+            text = stringResource(if (original == null) R.string.editor_new else R.string.editor_edit),
             style = MaterialTheme.typography.headlineMedium,
             color = sc.lime,
             modifier = Modifier.fillMaxWidth()
@@ -110,24 +112,25 @@ fun GlyphEditor(glyphId: String?, onClose: () -> Unit, modifier: Modifier = Modi
             }
         }
         Text(
-            text = if (brush == 0) "pincel · borrador" else "pincel · ${brush * 100 / MyGlyphs.LEVELS}%",
+            text = if (brush == 0) stringResource(R.string.editor_brush_eraser)
+                else stringResource(R.string.editor_brush_level, brush * 100 / MyGlyphs.LEVELS),
             style = MaterialTheme.typography.labelSmall,
             color = sc.text3
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SherryButton(text = "> guardar", neon = sc.lime, onClick = ::save)
-            SherryButton(text = "> cancelar", neon = sc.text2, onClick = onClose)
+            SherryButton(text = stringResource(R.string.editor_save), neon = sc.lime, onClick = ::save)
+            SherryButton(text = stringResource(R.string.editor_cancel), neon = sc.text2, onClick = onClose)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SherryButton(
-                text = "> limpiar",
+                text = stringResource(R.string.editor_clear),
                 neon = sc.text2,
                 onClick = { levels = ByteArray(levels.size) }
             )
             if (original != null) {
                 SherryButton(
-                    text = if (confirmDelete) "> toca otra vez" else "> eliminar",
+                    text = stringResource(if (confirmDelete) R.string.editor_delete_confirm else R.string.editor_delete),
                     neon = sc.magenta,
                     onClick = {
                         if (confirmDelete) {

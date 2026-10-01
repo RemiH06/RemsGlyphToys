@@ -5,6 +5,7 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * SpectrumAnalysis
@@ -45,6 +46,14 @@ import kotlin.math.min
  *                de x2: cada paso sube todo el espectro por igual y pareceria un
  *                golpe. Ademas debe subir la potencia propia de la banda, que
  *                un bajo parejo no sube. Vale 1 al golpe y se apaga en ~0.1 s.
+ *   [melody]     si hay una linea melodica (voz, silbido, viento): que parte
+ *                de la energia de 150 Hz a 2.5 kHz pertenece a una sola serie
+ *                armonica (una nota con sus armonicos). Un acorde la reparte
+ *                entre varias notas y el ruido no tiene armonicos. Se compara
+ *                contra lo que esa serie capturaria de un espectro plano, para
+ *                que el ruido de 0. Aproximado: la FFT del Visualizer tiene
+ *                ~43 Hz por bin, y una guitarra o un piano tocando la melodia
+ *                nota por nota tambien cuentan.
  *   [kickPresence] si la cancion "tiene bombo", casi biestable: cuenta golpes
  *                con memoria corta y se enciende con varios seguidos (histeresis:
  *                se apaga solo cuando ya casi no hay), asi que se queda en 0 o
@@ -76,6 +85,15 @@ class SpectrumAnalysis {
         private val ABSOLUTE_WEIGHT = floatArrayOf(0.2f, 0.6f, 0.6f)
 
         // Bombo: la banda de su golpe (el "click" agudo no se usa)
+        // Linea melodica: banda, fundamental minima (voz grave) y umbral de puntaje
+        private const val MELODY_LOW_HZ = 150f
+        private const val MELODY_HIGH_HZ = 2500f
+        private const val MELODY_MIN_F0_HZ = 100f
+        // La fundamental debe tener al menos esta fraccion del pico mas fuerte
+        private const val MELODY_FUNDAMENTAL = 0.2f
+        private const val MELODY_FROM = 0.32f
+        private const val MELODY_TO = 0.46f
+
         private const val KICK_LOW_HZ = 35f
         private const val KICK_HIGH_HZ = 180f
         // Cuanto deben brincar el contraste y la potencia propia de la banda
@@ -102,6 +120,13 @@ class SpectrumAnalysis {
     val flatness = FloatArray(FAMILY_COUNT)
     val flux = FloatArray(FAMILY_COUNT)
     val roughness = FloatArray(FAMILY_COUNT)
+
+    var melody = 0f
+        private set
+    /** Puntaje crudo de la linea melodica del ultimo cuadro (diagnostico y pruebas). */
+    var melodyScore = 0f
+        private set
+    private var melodyAverage = 0f
 
     var kick = 0f
         private set
@@ -178,6 +203,13 @@ class SpectrumAnalysis {
         }
         previous = magnitudes.copyOf()
         detectKick(magnitudes, binHz, loudness, dt)
+
+        // Primero el promedio de medio segundo y despues el umbral: decide la
+        // tendencia, no los cuadros sueltos que brincan en un acorde
+        melodyScore = melodyScore(magnitudes, binHz)
+        val score = if (loudness < 0.02f) 0f else melodyScore
+        melodyAverage = smooth(melodyAverage, score, dt, attack = 0.5f, release = 0.5f)
+        melody = smoothstep(MELODY_FROM, MELODY_TO, melodyAverage)
     }
 
     /** Sin audio: todo se desvanece. */
@@ -190,6 +222,8 @@ class SpectrumAnalysis {
         previous = FloatArray(0)
         pendingAge = -1f
         updateKickState(hit = false, confirmed = false, strength = 0f, dt = dt)
+        melodyAverage = smooth(melodyAverage, 0f, dt, 0.5f, 0.5f)
+        melody = smoothstep(MELODY_FROM, MELODY_TO, melodyAverage)
     }
 
     private fun detectKick(m: FloatArray, binHz: Float, loudness: Float, dt: Float) {
@@ -245,6 +279,62 @@ class SpectrumAnalysis {
         if (kickRate > KICK_ON) kickOn = true
         if (kickRate < KICK_OFF) kickOn = false
         kickPresence = smooth(kickPresence, if (kickOn) 1f else 0f, dt, attack = 0.25f, release = 1.0f)
+    }
+
+    /**
+     * Que tanto de la potencia de la banda melodica cae en los armonicos de una
+     * sola fundamental, menos lo que caeria de un espectro plano, sobre lo que
+     * falta para 1. Candidatas: el pico mas fuerte como fundamental o como su
+     * 2o a 6o armonico (en una voz grave el pico suele ser un armonico), cada
+     * una afinada en ±3 %. Una candidata cuenta solo si su fundamental tiene
+     * energia: un acorde mayor cae casi entero en los armonicos de una
+     * fundamental imaginaria una octava abajo, pero ahi no suena nada.
+     */
+    private fun melodyScore(m: FloatArray, binHz: Float): Float {
+        val (from, to) = range(MELODY_LOW_HZ, MELODY_HIGH_HZ, binHz, m.size)
+        var total = 0f
+        var peak = from
+        for (k in from until to) {
+            total += m[k] * m[k]
+            if (m[k] > m[peak]) peak = k
+        }
+        if (total <= 0f || m[peak] < 3f) return 0f
+        var best = 0f
+        for (divisor in 1..6) {
+            val guess = peak.toFloat() / divisor
+            if (guess * binHz < MELODY_MIN_F0_HZ) break
+            val fundamental = guess.roundToInt()
+            val around = max(m[fundamental], max(m[fundamental - 1], m.getOrElse(fundamental + 1) { 0f }))
+            if (around < MELODY_FUNDAMENTAL * m[peak]) continue
+            for (step in -6..6) {
+                best = max(best, combScore(m, guess * (1f + step * 0.005f), from, to, total))
+            }
+        }
+        return best
+    }
+
+    /** Puntaje de la serie armonica de [f0] (en bins) en la banda [from, to). */
+    private fun combScore(m: FloatArray, f0: Float, from: Int, to: Int, total: Float): Float {
+        // Ventana de ±1 bin si los armonicos estan separados; si no, solo el bin mas cercano
+        val reach = if (f0 >= 5f) 1 else 0
+        var captured = 0f
+        var covered = 0
+        var last = -1
+        var h = 1
+        while (true) {
+            val center = (h * f0).roundToInt()
+            if (center - reach >= to) break
+            for (k in center - reach..center + reach) {
+                if (k < from || k >= to || k <= last) continue
+                captured += m[k] * m[k]
+                covered++
+                last = k
+            }
+            h++
+        }
+        val coverage = covered.toFloat() / (to - from)
+        if (coverage >= 0.95f) return 0f
+        return ((captured / total - coverage) / (1f - coverage)).coerceIn(0f, 1f)
     }
 
     private fun range(lowHz: Float, highHz: Float, binHz: Float, bins: Int): Pair<Int, Int> {

@@ -1,0 +1,41 @@
+<resources>
+    <!-- Glyph Toys en el carrusel de Nothing -->
+    <string name="toy_summary_fluid">Agua que cae hacia donde inclinas el teléfono</string>
+    <string name="toy_summary_gallery">Tus fotos y glifos en la matriz. Mantén presionado para cambiar</string>
+    <string name="toy_summary_pulse">Tres figuras que respiran con el audio que se esté reproduciendo</string>
+
+    <!-- Inicio -->
+    <string name="home_fluid_description">Agua simulada con FLIP, como la fluid pendant de mitxela: cae hacia donde inclines el teléfono. Tócala para agitarla; en la matriz física, mantén presionado el botón Glyph. Una pulsación larga la reinicia.</string>
+    <string name="home_gallery_description">Elige las fotos que quieres ver (se promedian a 25x25) o dibuja tus propios glifos con cinco intensidades. Todos entran a la misma rotación. Toca la matriz para cambiar; en la matriz física, haz una pulsación larga en el botón Glyph.</string>
+    <string name="home_pulse_description">Tres figuras anidadas que respiran con lo que se esté reproduciendo, por bocina o audífonos: un hexágono para los graves, un diamante para las voces y un triángulo para los agudos. La que más suena queda afuera, las calladas se quedan quietas en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte. Doble toque para reiniciarla.</string>
+    <string name="home_footer">elige cada toy en el carrusel del botón Glyph</string>
+
+    <!-- Gallery y Mis glifos -->
+    <string name="gallery_empty">Elige fotos o dibuja un glifo</string>
+    <string name="gallery_pick">> elegir fotos</string>
+    <string name="gallery_pick_count">> elegir fotos · %1$d</string>
+    <string name="gallery_draw">> dibujar</string>
+    <string name="gallery_my_glyphs">mis glifos · %1$d · toca uno para editarlo</string>
+    <string name="editor_new">> nuevo glifo</string>
+    <string name="editor_edit">> editar glifo</string>
+    <string name="editor_brush_eraser">pincel · borrador</string>
+    <string name="editor_brush_level">pincel · %1$d%%</string>
+    <string name="editor_save">> guardar</string>
+    <string name="editor_cancel">> cancelar</string>
+    <string name="editor_clear">> limpiar</string>
+    <string name="editor_delete">> eliminar</string>
+    <string name="editor_delete_confirm">> toca otra vez</string>
+
+    <!-- Pulse -->
+    <string name="pulse_permission">Toca para dar permiso de audio</string>
+    <string name="pulse_rest">reposo</string>
+    <string name="rest_center">centro</string>
+    <string name="rest_human_eye">ojo</string>
+    <string name="rest_cat_eye">gato</string>
+    <string name="rest_logo">logo</string>
+    <string name="rest_boom">boom</string>
+    <string name="rest_plumb">plomada</string>
+    <string name="rest_melt">derretir</string>
+    <string name="rest_pieces">piezas</string>
+    <string name="rest_vanish">desaparecer</string>
+</resources>

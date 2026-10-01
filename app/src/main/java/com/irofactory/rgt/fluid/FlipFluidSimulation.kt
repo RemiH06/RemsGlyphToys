@@ -116,6 +116,9 @@ class FlipFluidSimulation(private val fill: Float = 0.38f) {
         restDensity = restPerLed * h * h
     }
 
+    /** Copia de las posiciones de las particulas (x, y intercalados, en LEDs desde la esquina). */
+    fun positions(): FloatArray = pos.copyOf(2 * count)
+
     /** Particulas por LED con el agua en reposo. */
     val particlesPerLed: Float get() = restPerLed
 

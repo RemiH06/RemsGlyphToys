@@ -39,15 +39,21 @@ import kotlin.random.Random
  * flotan depende de cuanto suenan) y sus bordes respiran con lobulos
  * organicos. Los cruces suman brillo. Motor puro, sin dependencias de Android.
  *
- * Experimento, cuarto anillo (KICK_RING): un anillo para el bombo, en dos
- * estilos (KICK_FROM_OUTSIDE):
- *   - desde afuera: vive fuera de la matriz. Si la cancion tiene bombo
- *     marcado, cada golpe lo mete al borde como una banda irregular (blob, con
- *     forma nueva en cada golpe) con un destello, y se retira sin prisa hacia
+ * Cuarto anillo (KICK_RING), el del bombo, en tres estilos ([style]):
+ *   - afuera: vive fuera de la matriz. Si la cancion tiene bombo marcado,
+ *     cada golpe lo mete al borde como una banda irregular (blob, con forma
+ *     nueva en cada golpe) con un destello, y se retira sin prisa hacia
  *     afuera, ya al brillo minimo, hasta desaparecer.
- *   - desde el centro: en reposo es una bolita tenue; cada golpe la lanza al
- *     borde con un destello y regresa sin prisa, ya al brillo minimo.
+ *   - adentro: en reposo es una bolita tenue; cada golpe la lanza al borde
+ *     con un destello y regresa sin prisa, ya al brillo minimo.
+ *   - onda: se abre hasta el borde mientras la cancion tiene bombo, destella
+ *     y engrosa con cada golpe; las otras figuras se encogen para caber.
  * Sin bombo marcado los golpes sueltos apenas lo mueven.
+ *
+ * Figuras ([style]): los agudos pueden ser triangulo o circulo (sin vertices;
+ * con sonido aspero le salen puntas cortas), las voces diamante o diamante
+ * aplanado (horizontal y siempre del mismo largo: lo que suena solo lo abre)
+ * y los graves hexagono o estrella de seis puntas.
  *
  * Reposo ([restPose], elegido en la app). Salvo en centro, que tanto se
  * forma el reposo sigue al volumen ([awake]); con musica todo vuelve a su
@@ -103,11 +109,18 @@ class AudioBlobSimulation {
         const val CLEARANCE = 0.8f
         // Largo maximo de las puntas con dureza total, relativo al tamano de la figura
         const val SPIKE = 0.45f
+        // Estrella: radio de sus valles respecto a las puntas y que tan afiladas son
+        const val STAR_INNER = 0.55f
+        const val STAR_SHARPNESS = 2.5f
+        // Circulo: cuantas puntas cortas le salen con sonido aspero
+        const val CIRCLE_SPIKES = 8
+        // Diamante aplanado: media anchura fija, horizontal
+        const val FLAT_HALF_WIDTH = 10.5f
         // Energia del diamante sin linea melodica (instrumental): sus bandas tienen
         // su propio control de ganancia y sin esto crece igual con guitarra o piano
         const val MID_WITHOUT_MELODY = 0.35f
 
-        // Experimento: anillo del bombo. false lo quita por completo
+        // Anillo del bombo. false lo quita por completo
         const val KICK_RING = true
         const val KICK_BALL = 0.8f
         const val KICK_THICKNESS = 1.1f
@@ -118,8 +131,8 @@ class AudioBlobSimulation {
         // siguiente golpe a 120 BPM (0.5 s)
         const val KICK_RETURN = 0.25f
         const val KICK_FLASH = 0.04f
-        // Estilo: true entra desde fuera de la matriz como blob; false sale de la bolita del centro
-        const val KICK_FROM_OUTSIDE = true
+        // Onda: espacio que deja a las otras figuras cuando esta abierta
+        const val KICK_RESERVE = KICK_THICKNESS + CLEARANCE + 0.4f
         // Blob de afuera: media anchura de la banda, cuanto se deforma y
         // radio al que llega el centro de la banda con un golpe completo
         const val KICK_BAND = 1.5f
@@ -169,8 +182,14 @@ class AudioBlobSimulation {
         const val MELT_FULL = 0.15f
         const val MELT_LEVEL = 0.45f
         const val PIECES_LEVEL = 0.5f
-        // Segundos que tardan el agua o las piezas en volver a ser las figuras
+        // Segundos que tardan el agua o las piezas en volver a ser las figuras;
+        // antes, el agua se reparte pegada al borde (radio y grosor de esa capa)
         const val REFORM_TIME = 2f
+        const val SPREAD_TIME = 0.8f
+        const val RIM_RADIUS = 11.6f
+        const val RIM_DEPTH = 1.6f
+        // Segundos en que cada figura se vuelve su pieza al empezar el silencio
+        const val SOLIDIFY_TIME = 0.6f
         // Volumen con el que el reposo empieza a deshacerse y con el que ya no queda nada
         const val EYE_OPEN_FROM = 0.03f
         const val EYE_OPEN_TO = 0.3f
@@ -178,9 +197,12 @@ class AudioBlobSimulation {
         const val EYE_POINTS = 72
     }
 
+    private enum class Form { POLYGON, CIRCLE, STAR }
+
     /**
      * Una figura: circulo deformado por el armonico de [sides] lobulos (su
-     * poligono redondeado) mas lobulos organicos que la hacen respirar.
+     * poligono redondeado) mas lobulos organicos que la hacen respirar. Con
+     * [form] puede ser circulo o estrella en vez de poligono.
      */
     private class Ring(
         val sides: Int,
@@ -211,26 +233,46 @@ class AudioBlobSimulation {
         /** Definicion fija de reposo y cuanto pesa (0 = la de la musica). */
         var restAmp = 0f
         var restBlend = 0f
+        var form = Form.POLYGON
+        /** Cuanto se vuelve poligono regular, de lados rectos y vertices afilados (logo, plomada). */
+        var polygonBlend = 0f
 
         /** Que tan marcada esta la forma: mas definida entre mas suena; mas redonda si es suave. */
         private val definition: Float get() {
+            if (form != Form.POLYGON) return 0f
             val playing = shapeAmp * (0.6f + 0.4f * energy) * (0.4f + 0.6f * harshness)
             return playing + (restAmp - playing) * restBlend
         }
         /** Largo de las puntas: solo aparecen con dureza, y crecen mas rapido que ella. */
-        private val spikeLength get() = SPIKE * harshness * sqrt(harshness)
+        private val spikeLength get() = SPIKE * harshness * sqrt(harshness) * (if (form == Form.CIRCLE) 0.5f else 1f)
+        private val spikeSides get() = if (form == Form.CIRCLE) CIRCLE_SPIKES else sides
         /** Que tan delgadas son las puntas: exponente del perfil del vertice. */
         private val spikeSharpness get() = 1f + 10f * harshness
         private val lobeReach get() = 0.5f * lobes.indices.sumOf { (lobeAmp[it] * lobeLevel[it]).toDouble() }.toFloat()
         val outer get() = (size * (1f + definition + spikeLength) + lobeReach) * squeeze
-        val inner get() = ((size * (1f - definition) - lobeReach) * squeeze).coerceAtLeast(0.5f)
+        val inner get() = ((size * (if (form == Form.STAR) STAR_INNER else 1f - definition) - lobeReach) * squeeze)
+            .coerceAtLeast(0.5f)
 
         fun radius(theta: Float): Float {
             val wave = cos(sides * (theta - rotation))
+            var base = when (form) {
+                Form.POLYGON -> 1f + definition * wave
+                Form.CIRCLE -> 1f
+                // Estrella: el perfil del vertice elevado a una potencia deja puntas y valles
+                Form.STAR -> STAR_INNER + (1f - STAR_INNER) * (0.5f + 0.5f * wave).pow(STAR_SHARPNESS)
+            }
+            if (polygonBlend > 0f && form == Form.POLYGON) {
+                // Poligono regular en polares: la apotema entre el coseno del angulo al medio de su lado
+                val segment = 2f * PI_F / sides
+                var phi = (theta - rotation) % segment
+                if (phi < 0f) phi += segment
+                base += (cos(PI_F / sides) / cos(phi - segment / 2f) - base) * polygonBlend
+            }
             // Punta: el perfil 0..1 del vertice elevado a una potencia alta queda
             // angosto, asi que solo la zona del vertice se estira
-            val spike = spikeLength * ((0.5f + 0.5f * wave).pow(spikeSharpness))
-            var r = size * (1f + definition * wave + spike)
+            val spikeWave = if (spikeSides == sides) wave else cos(spikeSides * (theta - rotation))
+            val spike = spikeLength * ((0.5f + 0.5f * spikeWave).pow(spikeSharpness))
+            var r = size * (base + spike)
             for (i in lobes.indices) r += lobeAmp[i] * lobeLevel[i] * 0.5f * cos(lobes[i] * (theta - phase[i]))
             return (r * squeeze).coerceAtLeast(0.6f)
         }
@@ -274,6 +316,17 @@ class AudioBlobSimulation {
     /** Como se ve en silencio; se puede cambiar en cualquier momento. */
     var restPose = RestPose.CAT_EYE
 
+    /** Figuras y estilo del bombo; se puede cambiar en cualquier momento. */
+    var style = PulseStyle()
+        set(value) {
+            field = value
+            high.form = if (value.high == HighShape.CIRCLE) Form.CIRCLE else Form.POLYGON
+            low.form = if (value.low == LowShape.STAR) Form.STAR else Form.POLYGON
+        }
+    private val midFlat get() = style.mid == MidShape.FLAT_DIAMOND
+    // Onda del bombo: que tan abierta esta (0 = bolita, 1 = en el borde)
+    private var kickOpen = 0f
+
     // Gravedad en m/s², ejes de la matriz (y hacia abajo); la escribe el sensor desde otro hilo
     @Volatile private var gravityX = 0f
     @Volatile private var gravityY = 9.81f
@@ -285,11 +338,19 @@ class AudioBlobSimulation {
     private var transformedShown = 0f
     // Reconstruccion: avance 0..1 (< 0 = no se esta reconstruyendo), de donde
     // sale cada particula, a que figura va y en que angulo; y estado de las piezas
+    // Agua: de donde sale cada particula (radio y angulo), a donde llega en el
+    // borde, y a que figura y angulo va despues
     private var reform = -1f
-    private var reformFrom = FloatArray(0)
+    private var reformFromRadius = FloatArray(0)
+    private var reformFromAngle = FloatArray(0)
+    private var reformRimRadius = FloatArray(0)
+    private var reformRimAngle = FloatArray(0)
     private var reformRing = IntArray(0)
     private var reformAngle = FloatArray(0)
     private var reformPieces = emptyArray<FloatArray>()
+    private val reformDuration get() = if (restPose == RestPose.MELT) SPREAD_TIME + REFORM_TIME else REFORM_TIME
+    // Piezas: segundos desde que las figuras empezaron a volverse piezas (< 0 = ya lo son)
+    private var solidify = -1f
     private val fluid by lazy { FlipFluidSimulation() }
     private val pieces by lazy { SolidPieces() }
     private val meltRandom = Random(5)
@@ -332,16 +393,26 @@ class AudioBlobSimulation {
                     kickLobePhase[i] = random.nextFloat() * 2f * PI_F
                 }
             }
-            if (KICK_FROM_OUTSIDE) {
-                for (i in kickLobes.indices) kickLobePhase[i] += kickLobeSpin[i] * dt
-                // Afuera del todo: ni la banda ni sus lobulos alcanzan un LED
-                val out = GlyphFrames.LED_RADIUS + KICK_BAND + KICK_WOBBLE * 1.5f + 0.5f
-                // Sin bombo marcado, un golpe suelto apenas se asoma por el borde
-                kickRadius = out - (out - KICK_IN) * (open + 0.35f * (1f - open)) * kickReach
-            } else {
-                val far = edge - KICK_THICKNESS * 0.6f
-                // Sin bombo marcado, un golpe suelto solo infla un poco la bolita
-                kickRadius = KICK_BALL + ((far - KICK_BALL) * open + 1.2f * (1f - open)) * kickReach
+            val far = edge - KICK_THICKNESS * 0.6f
+            kickOpen = 0f
+            when (style.kick) {
+                KickStyle.OUTSIDE -> {
+                    for (i in kickLobes.indices) kickLobePhase[i] += kickLobeSpin[i] * dt
+                    // Afuera del todo: ni la banda ni sus lobulos alcanzan un LED
+                    val out = GlyphFrames.LED_RADIUS + KICK_BAND + KICK_WOBBLE * 1.5f + 0.5f
+                    // Sin bombo marcado, un golpe suelto apenas se asoma por el borde
+                    kickRadius = out - (out - KICK_IN) * (open + 0.35f * (1f - open)) * kickReach
+                }
+                KickStyle.INSIDE -> {
+                    // Sin bombo marcado, un golpe suelto solo infla un poco la bolita
+                    kickRadius = KICK_BALL + ((far - KICK_BALL) * open + 1.2f * (1f - open)) * kickReach
+                }
+                KickStyle.WAVE -> {
+                    // Abierta mientras la cancion tiene bombo; el golpe solo destella
+                    kickOpen = open
+                    kickFlash = kick
+                    kickRadius = KICK_BALL + (far - KICK_BALL) * open + 1.2f * (1f - open) * kick
+                }
             }
         }
 
@@ -360,6 +431,8 @@ class AudioBlobSimulation {
                 restPose == RestPose.PLUMB && ring === high -> rest
                 else -> 0f
             }
+            // El triangulo del logo y la plomada: regular, de vertices afilados
+            ring.polygonBlend = if (ring === high && (restPose == RestPose.LOGO || restPose == RestPose.PLUMB)) rest else 0f
         }
         stepTransformation(dt)
         if (KICK_RING && restPose == RestPose.BOOM) {
@@ -421,14 +494,16 @@ class AudioBlobSimulation {
             ring.x += (tx - ring.x) * follow
             ring.y += (ty - ring.y) * follow
         }
-        if (isEye) {
+        if (isEye || midFlat) {
             // El diamante tiene simetria de 1/4 de vuelta: se envuelve a ±45° y,
-            // al cerrarse el ojo, gira hasta dejar sus vertices en horizontal
+            // al cerrarse el ojo (o siempre, si es el aplanado), gira hasta
+            // dejar sus vertices en horizontal
             val quarter = PI_F / 2f
             var a = mid.rotation % quarter
             if (a > quarter / 2f) a -= quarter
             if (a < -quarter / 2f) a += quarter
-            mid.rotation = a * (1f - (1f - awake) * (1f - exp(-dt / 0.3f)))
+            val pull = if (midFlat) 1f else 1f - awake
+            mid.rotation = a * (1f - pull * (1f - exp(-dt / 0.3f)))
         }
         if (restPose == RestPose.PLUMB) {
             // Resorte hacia el suelo; con simetria de 1/3 de vuelta, cualquier vertice sirve
@@ -446,8 +521,10 @@ class AudioBlobSimulation {
         // Anidado, de afuera hacia adentro: la mas chica queda dentro de la mas
         // grande con hueco visible (comprimiendose si no cabe) salvo que sus
         // tamanos se parezcan, que es cuando se cruzan. Luego, todas dentro del tope.
+        // Con la onda del bombo abierta, las figuras le dejan su lugar en el borde
+        val limit = minOf(shapeLimit, edge - kickOpen * KICK_RESERVE)
         for (ring in rings) ring.squeeze = 1f
-        for (ring in rings) if (ring.outer > shapeLimit) ring.squeeze = shapeLimit / ring.outer
+        for (ring in rings) if (ring.outer > limit) ring.squeeze = limit / ring.outer
         val bySize = rings.sortedByDescending { it.size }
         for (i in bySize.indices) for (j in i + 1 until bySize.size) {
             val big = bySize[i]
@@ -455,6 +532,8 @@ class AudioBlobSimulation {
             var nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
             // En reposo los parpados o la rendija no empujan ni los empujan: van encima
             when {
+                // Diamante aplanado: su largo cruza a las demas, sin empujarlas
+                midFlat && (big === mid || small === mid) -> nest = 0f
                 // Ojos: los parpados o la rendija van encima de las demas
                 isEye && (big === mid || small === mid) -> nest *= awake
                 // Logo y boom: sus tamanos ya estan elegidos, sin empujarse
@@ -482,7 +561,7 @@ class AudioBlobSimulation {
         }
         for (ring in rings) {
             val d = hypot(ring.x, ring.y)
-            val room = (shapeLimit - ring.outer).coerceAtLeast(0f)
+            val room = (limit - ring.outer).coerceAtLeast(0f)
             if (d > room && d > 1e-3f) { ring.x = ring.x / d * room; ring.y = ring.y / d * room }
         }
     }
@@ -501,18 +580,25 @@ class AudioBlobSimulation {
         // Mientras son agua o piezas (o se reconstruyen), las figuras no se ven
         val fullLevels = levels.copyOf()
         val reforming = reform >= 0f
-        val ringsShown = if (reforming) 0f else 1f - transformedShown
+        val solidifying = solidify >= 0f
+        val ringsShown = if (reforming || solidifying) 0f else 1f - transformedShown
         for (i in levels.indices) levels[i] *= ringsShown
         val fluidGrid = if (restPose == RestPose.MELT && transformedShown > 0.001f && !reforming) fluid.rasterize() else null
-        val ease = smoothstep(0f, 1f, reform)
-        val particleGrid = if (reforming && restPose == RestPose.MELT) reformParticles(ease, fullLevels) else null
+        val ease = smoothstep(0f, REFORM_TIME, reform)
+        val particleGrid = if (reforming && restPose == RestPose.MELT) reformParticles(reform, fullLevels) else null
+        // Al volverse piezas: cada figura va de su contorno a su pieza, que ya cae
+        val solidifyEase = 1f - smoothstep(0f, SOLIDIFY_TIME, solidify)
+        val pieceStates = if (solidifying) pieces.snapshot() else null
         // Tenue en reposo y al regresar; solo el golpe destella
-        var kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
+        var kickLevel = if (style.kick == KickStyle.WAVE) (0.35f + 0.65f * kickFlash) * light
+            else (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
         if (restPose == RestPose.BOOM) kickLevel += (BOOM_LEVEL * light - kickLevel) * (1f - awake)
         if (restPose == RestPose.VANISH) kickLevel *= ringsShown
-        val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash)
+        val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash * (if (style.kick == KickStyle.WAVE) kickOpen else 1f))
         val eyeClosed = if (isEye) 1f - awake else 0f
-        if (eyeClosed > 0.001f) buildLid(eyeClosed)
+        // Parpados, rendija o diamante aplanado: el diamante se dibuja como contorno con su grosor real
+        val midOutline = eyeClosed > 0.001f || midFlat
+        if (midOutline) buildLid(eyeClosed)
 
         for (row in 0 until n) {
             for (col in 0 until n) {
@@ -522,9 +608,8 @@ class AudioBlobSimulation {
 
                 // Mezcla tipo "screen": los cruces brillan mas sin saturar de golpe
                 var dark = 1f
-                if (eyeClosed > 0.001f) {
-                    // Parpados o rendija como linea con su grosor real. En el ojo
-                    // humano la iris y la pupila solo se ven dentro de los parpados
+                if (midOutline) {
+                    // En el ojo humano la iris y la pupila solo se ven dentro de los parpados
                     val (inside, distance) = lidDistance(x, y)
                     val keep = if (restPose == RestPose.HUMAN_EYE) {
                         val clip = (0.5f + (if (inside) distance else -distance) / 0.6f).coerceIn(0f, 1f)
@@ -537,7 +622,7 @@ class AudioBlobSimulation {
                     for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
                 }
                 if (KICK_RING) {
-                    val shape = if (KICK_FROM_OUTSIDE) kickBlob(x, y, KICK_BAND * (1f + 0.3f * kickFlash))
+                    val shape = if (style.kick == KickStyle.OUTSIDE) kickBlob(x, y, KICK_BAND * (1f + 0.3f * kickFlash))
                         else kickShape(hypot(x, y), kickThickness)
                     dark *= 1f - shape * kickLevel
                 }
@@ -545,6 +630,10 @@ class AudioBlobSimulation {
                     if (particleGrid != null) dark *= 1f - particleGrid[row][col]
                     if (restPose == RestPose.PIECES) for (i in rings.indices) {
                         dark *= 1f - morphRim(x, y, reformPieces[i], rings[i], ease) * lerp(PIECES_LEVEL, fullLevels[i], ease)
+                    }
+                } else if (pieceStates != null) {
+                    for (i in rings.indices) {
+                        dark *= 1f - morphRim(x, y, pieceStates[i], rings[i], solidifyEase) * lerp(PIECES_LEVEL, fullLevels[i], solidifyEase)
                     }
                 } else if (transformedShown > 0.001f) {
                     if (fluidGrid != null) dark *= 1f - fluidGrid[row][col] * MELT_LEVEL * transformedShown
@@ -576,9 +665,11 @@ class AudioBlobSimulation {
             val s = sin(theta)
             val r = mid.radius(theta)
             val cat = restPose == RestPose.CAT_EYE
+            // Aplanado: se estira a lo ancho hasta su largo fijo (si ya es mas grande, queda igual)
+            val flatX = if (midFlat) (FLAT_HALF_WIDTH / (mid.size * mid.squeeze).coerceAtLeast(0.5f)).coerceAtLeast(1f) else 1f
             val almondX = if (cat) SLIT_WIDTH * c * abs(c) else HUMAN_WIDTH * c
             val almondY = if (cat) SLIT_HEIGHT * s else HUMAN_HEIGHT * s * abs(s)
-            lid[2 * i] = mid.x + lerp(r * c, almondX, closed)
+            lid[2 * i] = mid.x + lerp(r * c * flatX, almondX, closed)
             lid[2 * i + 1] = mid.y + lerp(r * s, almondY, closed)
         }
     }
@@ -636,8 +727,8 @@ class AudioBlobSimulation {
         }
         if (reform >= 0f) {
             // Una reconstruccion siempre termina; si volvio el silencio, despues se transforma otra vez
-            reform += dt / REFORM_TIME
-            if (reform >= 1f) reform = -1f
+            reform += dt
+            if (reform >= reformDuration) reform = -1f
             return
         }
         if (!transformed && awake < SOLIDIFY) {
@@ -647,19 +738,27 @@ class AudioBlobSimulation {
                 transformedShown = 0f
                 fluid.pour(meltPoints(rasterize()))
                 transformedShown = 1f
-            } else {
+            } else if (restPose == RestPose.PIECES) {
+                // Sin desvanecer: cada figura se transforma en su pieza
                 pieces.reset(floatArrayOf(low.rotation, mid.rotation, high.rotation))
+                solidify = 0f
+                transformedShown = 1f
             }
         } else if (transformed && awake > REFORM) {
             transformed = false
             if (restPose != RestPose.VANISH) {
                 startReform()
                 transformedShown = 0f
+                solidify = -1f
                 return
             }
         }
         val target = if (transformed) 1f else 0f
         transformedShown += (target - transformedShown) * (1f - exp(-dt / 0.25f))
+        if (solidify >= 0f) {
+            solidify += dt
+            if (solidify >= SOLIDIFY_TIME) solidify = -1f
+        }
         if (transformedShown > 0.001f && restPose != RestPose.VANISH) {
             if (restPose == RestPose.MELT) {
                 fluid.setGravity(gravityX, gravityY)
@@ -702,39 +801,67 @@ class AudioBlobSimulation {
             reformPieces = pieces.snapshot()
             return
         }
+        // Al borde: angulos repartidos parejo, en el mismo orden en que ya estan
+        // alrededor de su angulo promedio; asi el agua se extiende hacia los dos
+        // lados por el borde, sin cruzar el centro
         val p = fluid.positions()
         val count = p.size / 2
-        reformFrom = p
+        reformFromRadius = FloatArray(count)
+        reformFromAngle = FloatArray(count)
+        reformRimRadius = FloatArray(count)
+        reformRimAngle = FloatArray(count)
         reformRing = IntArray(count)
         reformAngle = FloatArray(count)
-        val order = (0 until count).sortedByDescending { hypot(p[2 * it] - center, p[2 * it + 1] - center) }
-        val bySize = rings.indices.sortedByDescending { rings[it].size }
+        var sumSin = 0f
+        var sumCos = 0f
+        for (i in 0 until count) {
+            val a = atan2(p[2 * i + 1] - center, p[2 * i] - center)
+            sumSin += sin(a); sumCos += cos(a)
+        }
+        val mean = atan2(sumSin, sumCos)
+        val relative = FloatArray(count) { i ->
+            var a = atan2(p[2 * i + 1] - center, p[2 * i] - center) - mean
+            while (a > PI_F) a -= 2f * PI_F
+            while (a < -PI_F) a += 2f * PI_F
+            a
+        }
         val total = rings.sumOf { it.size.toDouble() }.toFloat()
-        var k = 0
-        for ((rank, r) in bySize.withIndex()) {
-            val share = if (rank == bySize.lastIndex) count - k else (count * rings[r].size / total).toInt()
-            repeat(share) {
-                val i = order[k++]
-                reformRing[i] = r
-                reformAngle[i] = atan2(p[2 * i + 1] - center - rings[r].y, p[2 * i] - center - rings[r].x)
-            }
+        for ((rank, i) in (0 until count).sortedBy { relative[it] }.withIndex()) {
+            reformFromRadius[i] = hypot(p[2 * i] - center, p[2 * i + 1] - center)
+            reformFromAngle[i] = mean + relative[i]
+            val rimAngle = mean + 2f * PI_F * ((rank + 0.5f) / count - 0.5f)
+            val rimRadius = RIM_RADIUS - RIM_DEPTH * meltRandom.nextFloat()
+            reformRimRadius[i] = rimRadius
+            reformRimAngle[i] = rimAngle
+            // Figura al azar, mas probable la mas grande; cada particula va hacia el centro desde donde quedo
+            var pick = meltRandom.nextFloat() * total
+            var r = 0
+            while (r < rings.lastIndex && pick > rings[r].size) { pick -= rings[r].size; r++ }
+            reformRing[i] = r
+            reformAngle[i] = atan2(rimRadius * sin(rimAngle) - rings[r].y, rimRadius * cos(rimAngle) - rings[r].x)
         }
     }
 
     /**
-     * Brillo de las particulas en vuelo: cada una va de donde estaba a su
-     * punto en el contorno vivo de su figura. Cuenta por LED con el brillo de
-     * su figura, asi al llegar se ve igual que la figura que la reemplaza.
+     * Brillo de las particulas en vuelo: primero se extienden por el borde
+     * (en polares, asi lo recorren en vez de cruzar el centro) y luego cada una
+     * va a su punto en el contorno vivo de su figura. Cuenta por LED con el
+     * brillo de su figura, asi al llegar se ve igual que la figura que la
+     * reemplaza. [elapsed] en segundos desde que empezo.
      */
-    private fun reformParticles(ease: Float, levels: FloatArray): Array<FloatArray> {
+    private fun reformParticles(elapsed: Float, levels: FloatArray): Array<FloatArray> {
+        val spread = smoothstep(0f, SPREAD_TIME, elapsed)
+        val ease = smoothstep(SPREAD_TIME, SPREAD_TIME + REFORM_TIME, elapsed)
         val count = Array(n) { FloatArray(n) }
         val level = Array(n) { FloatArray(n) }
         for (i in reformRing.indices) {
             val ring = rings[reformRing[i]]
+            val angle = lerp(reformFromAngle[i], reformRimAngle[i], spread)
+            val distance = lerp(reformFromRadius[i], reformRimRadius[i], spread)
             val theta = reformAngle[i]
             val radius = ring.radius(theta)
-            val x = lerp(reformFrom[2 * i], center + ring.x + radius * cos(theta), ease)
-            val y = lerp(reformFrom[2 * i + 1], center + ring.y + radius * sin(theta), ease)
+            val x = lerp(center + distance * cos(angle), center + ring.x + radius * cos(theta), ease)
+            val y = lerp(center + distance * sin(angle), center + ring.y + radius * sin(theta), ease)
             val col = x.toInt()
             val row = y.toInt()
             if (row !in 0 until n || col !in 0 until n) continue

@@ -5,13 +5,10 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
@@ -41,20 +39,28 @@ import com.irofactory.rgt.R
 /**
  * Vista previa en pantalla del toy pulse. Aqui se pide RECORD_AUDIO: el toy
  * corre en segundo plano y no puede mostrar el dialogo de permisos. Doble
- * toque la reinicia: figuras desde cero y el audio vuelto a abrir. Abajo
- * se elige el reposo ([RestPose]); el toy toma la misma eleccion.
+ * toque la reinicia: figuras desde cero y el audio vuelto a abrir. Muestra
+ * el [restPose] y el [style] que se le pasen (se eligen en
+ * [PulseSettingsScreen]); con [onCustomize] agrega el boton para ir ahi.
  *
  * El audio solo se lee con la app al frente: el Visualizer de la salida se
  * comparte dentro del proceso, y si la vista previa lo dejara encendido en
  * segundo plano, el toy no podria abrir el suyo.
  */
 @Composable
-fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
+fun AudioSphereMatrixView(
+    restPose: RestPose,
+    style: PulseStyle,
+    modifier: Modifier = Modifier,
+    onCustomize: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val sc = sherryColors
 
     var sim by remember { mutableStateOf(AudioBlobSimulation()) }
-    var restPose by remember { mutableStateOf(RestPose.load(context)) }
+    // El ciclo de cuadros arranca una vez: lee siempre lo ultimo que se eligio
+    val currentPose by rememberUpdatedState(restPose)
+    val currentStyle by rememberUpdatedState(style)
     val audioSource = remember { AudioSpectrumSource(context.applicationContext) }
     var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
     var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
@@ -98,7 +104,8 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
             val dt = ((currentTime - lastTime) / 1000f).coerceIn(0.005f, 0.08f)
             lastTime = currentTime
             audioSource.update(dt)
-            sim.restPose = restPose
+            sim.restPose = currentPose
+            sim.style = currentStyle
             sim.setGravity(gravity[0], gravity[1])
             sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence, audioSource.melody)
@@ -135,22 +142,8 @@ fun AudioSphereMatrixView(modifier: Modifier = Modifier) {
                 )
             }
         }
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(text = stringResource(R.string.pulse_rest), style = MaterialTheme.typography.labelSmall, color = sc.text3)
-            for (pose in RestPose.entries) {
-                SherryButton(
-                    text = stringResource(pose.label).let { if (pose == restPose) "> $it" else it },
-                    neon = if (pose == restPose) sc.magenta else sc.text3,
-                    onClick = {
-                        restPose = pose
-                        RestPose.save(context, pose)
-                    }
-                )
-            }
+        if (onCustomize != null) {
+            SherryButton(text = stringResource(R.string.pulse_customize), neon = sc.magenta, onClick = onCustomize)
         }
     }
 }

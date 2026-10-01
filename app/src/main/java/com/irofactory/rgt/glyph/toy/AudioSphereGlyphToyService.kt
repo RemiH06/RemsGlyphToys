@@ -4,6 +4,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import com.irofactory.rgt.audio.AudioBlobSimulation
 import com.irofactory.rgt.audio.AudioSpectrumSource
+import com.irofactory.rgt.audio.PulseStyle
 import com.irofactory.rgt.audio.RestPose
 import com.irofactory.rgt.fluid.gravityListener
 import com.irofactory.rgt.glyph.GlyphFrames
@@ -44,6 +45,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
         audioSource.update(dt)
         // Se lee en cada cuadro (SharedPreferences ya lo tiene en memoria) para tomar el cambio al instante
         sim.restPose = RestPose.load(applicationContext)
+        sim.style = PulseStyle.load(applicationContext)
         listenGravity(sim.restPose.usesGravity)
         sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence, audioSource.melody)

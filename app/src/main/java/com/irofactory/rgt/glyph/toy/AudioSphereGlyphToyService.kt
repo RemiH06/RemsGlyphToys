@@ -2,6 +2,7 @@ package com.irofactory.rgt.glyph.toy
 
 import com.irofactory.rgt.audio.AudioBlobSimulation
 import com.irofactory.rgt.audio.AudioSpectrumSource
+import com.irofactory.rgt.audio.RestPose
 import com.irofactory.rgt.glyph.GlyphFrames
 
 /**
@@ -32,6 +33,8 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
             if (!audioSource.isActive) return idleFrame
         }
         audioSource.update(dt)
+        // Se lee en cada cuadro (SharedPreferences ya lo tiene en memoria) para tomar el cambio al instante
+        sim.restPose = RestPose.load(applicationContext)
         sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence)
         return GlyphFrames.fromGrid(sim.rasterize(), mask)

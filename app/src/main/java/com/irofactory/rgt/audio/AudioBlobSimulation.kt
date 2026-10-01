@@ -48,13 +48,18 @@ import kotlin.random.Random
  *     borde con un destello y regresa sin prisa, ya al brillo minimo.
  * Sin bombo marcado los golpes sueltos apenas lo mueven.
  *
- * Reposo como ojo de gato (EYE_REST): la apertura sigue al volumen. En
- * silencio el diamante se vuelve una rendija vertical con puntas (la pupila),
- * el hexagono crece alrededor (la iris) y el triangulo queda chico en medio
- * de la rendija (un brillo). La mirada va de un lado a otro: se queda un rato
- * en cada lado y cambia rapido; la iris se mueve la mitad que la rendija,
- * como un ojo redondo. Con musica el ojo se abre y todo vuelve a su
- * comportamiento normal.
+ * Reposo ([restPose], elegido en la app). En los ojos la apertura sigue al
+ * volumen; con musica se abren y todo vuelve a su comportamiento normal:
+ *   - centro: las tres figuras se juntan al centro.
+ *   - ojo: el diamante se aplana en una almendra horizontal con puntas que
+ *     casi toca los bordes (los parpados); el hexagono queda chico al centro
+ *     (la iris) y el triangulo dentro (la pupila), recortados por los parpados.
+ *   - gato: del tamano de la matriz. El hexagono crece hasta el tope (la iris,
+ *     como si el silencio la dejara caer hasta el fondo), el diamante se vuelve
+ *     una rendija vertical con puntas (la pupila) y el triangulo queda chico
+ *     en medio (un brillo). La mirada va de un lado a otro: se queda un rato
+ *     en cada lado y cambia rapido; la iris se mueve la mitad que la rendija,
+ *     como un ojo redondo.
  */
 class AudioBlobSimulation {
 
@@ -99,21 +104,26 @@ class AudioBlobSimulation {
         const val KICK_WOBBLE = 1.2f
         const val KICK_IN = 11f
 
-        // Ojo en reposo. false regresa al reposo de antes (todo al centro)
-        const val EYE_REST = true
-        // Media anchura y media altura de la rendija en reposo, en celdas
-        const val SLIT_WIDTH = 1.4f
-        const val SLIT_HEIGHT = 7f
-        // Radio de la iris (hexagono) y del brillo (triangulo) en reposo
-        const val IRIS_REST = 8f
-        const val PUPIL_REST = 0.8f
-        // Mirada: cuanto se desliza la rendija (celdas) y cada cuanto va y vuelve (s)
-        const val LOOK = 2f
+        // Ojo humano en reposo: media anchura y media altura de la almendra
+        // (casi toca el borde, 12.5, sin que la linea se salga), y radios de
+        // la iris (hexagono) y la pupila (triangulo)
+        const val HUMAN_WIDTH = 11.3f
+        const val HUMAN_HEIGHT = 1.6f
+        const val HUMAN_IRIS = 2.6f
+        const val HUMAN_PUPIL = 1.2f
+        // Ojo de gato en reposo: media anchura y media altura de la rendija,
+        // radio de la iris (12 = el tope de las figuras) y del brillo
+        const val SLIT_WIDTH = 2f
+        const val SLIT_HEIGHT = 10.5f
+        const val CAT_IRIS = 12f
+        const val CAT_PUPIL = 1f
+        // Mirada del gato: cuanto se desliza la rendija (celdas) y cada cuanto va y vuelve (s)
+        const val LOOK = 3f
         const val LOOK_PERIOD = 7f
         // Volumen con el que el ojo empieza a abrirse y con el que ya esta abierto
         const val EYE_OPEN_FROM = 0.03f
         const val EYE_OPEN_TO = 0.3f
-        // Puntos del contorno de la rendija
+        // Puntos del contorno de los parpados o la rendija
         const val EYE_POINTS = 72
     }
 
@@ -203,8 +213,12 @@ class AudioBlobSimulation {
     private val kickLobePhase = FloatArray(kickLobes.size)
     private val random = Random(11)
 
-    // Ojo: 0 en reposo .. 1 abierto, y contorno de la rendija (x, y intercalados)
+    /** Como se ve en silencio; se puede cambiar en cualquier momento. */
+    var restPose = RestPose.CAT_EYE
+
+    // Ojo: 0 en reposo .. 1 abierto, y contorno de los parpados o la rendija (x, y intercalados)
     private var eyeOpen = 0f
+    private val isEye get() = restPose != RestPose.CENTER
     private val lid = FloatArray(EYE_POINTS * 2)
 
     /**
@@ -246,10 +260,12 @@ class AudioBlobSimulation {
             }
         }
 
-        if (EYE_REST) {
+        if (isEye) {
             val target = smoothstep(EYE_OPEN_FROM, EYE_OPEN_TO, loud)
             val tau = if (target > eyeOpen) 0.3f else 0.8f
             eyeOpen += (target - eyeOpen) * (1f - exp(-dt / tau))
+        } else {
+            eyeOpen = 1f
         }
 
         low.harshness = harshness[0]
@@ -271,9 +287,10 @@ class AudioBlobSimulation {
         for (ring in rings) {
             val ratio = (ring.energy + ENERGY_FLOOR) / (maxEnergy + ENERGY_FLOOR)
             var target = (outerSize * ratio.pow(LOG_SPREAD)).coerceAtLeast(MIN_RADIUS)
-            if (EYE_REST) {
-                if (ring === low) target = lerp(IRIS_REST, target, eyeOpen)
-                if (ring === high) target = lerp(PUPIL_REST, target, eyeOpen)
+            if (isEye) {
+                val cat = restPose == RestPose.CAT_EYE
+                if (ring === low) target = lerp(if (cat) CAT_IRIS else HUMAN_IRIS, target, eyeOpen)
+                if (ring === high) target = lerp(if (cat) CAT_PUPIL else HUMAN_PUPIL, target, eyeOpen)
             }
             ring.size += (target - ring.size) * sizeFollow
 
@@ -288,7 +305,7 @@ class AudioBlobSimulation {
             ring.x += (tx - ring.x) * follow
             ring.y += (ty - ring.y) * follow
         }
-        if (EYE_REST) {
+        if (isEye) {
             // El diamante tiene simetria de 1/4 de vuelta: se envuelve a ±45° y,
             // al cerrarse el ojo, gira hasta dejar sus vertices en horizontal
             val quarter = PI_F / 2f
@@ -311,8 +328,8 @@ class AudioBlobSimulation {
             val big = bySize[i]
             val small = bySize[j]
             var nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
-            // En reposo la rendija no empuja ni la empujan: va encima de la iris
-            if (EYE_REST && (big === mid || small === mid)) nest *= eyeOpen
+            // En reposo los parpados o la rendija no empujan ni los empujan: van encima
+            if (isEye && (big === mid || small === mid)) nest *= eyeOpen
             if (nest <= 0f) continue
             val gap = big.thickness + small.thickness + CLEARANCE
 
@@ -346,7 +363,7 @@ class AudioBlobSimulation {
         // Tenue en reposo y al regresar; solo el golpe destella
         val kickLevel = (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash)
-        val eyeClosed = if (EYE_REST) 1f - eyeOpen else 0f
+        val eyeClosed = 1f - eyeOpen
         if (eyeClosed > 0.001f) buildLid(eyeClosed)
 
         for (row in 0 until n) {
@@ -358,10 +375,16 @@ class AudioBlobSimulation {
                 // Mezcla tipo "screen": los cruces brillan mas sin saturar de golpe
                 var dark = 1f
                 if (eyeClosed > 0.001f) {
-                    // La rendija se dibuja como linea con su grosor real
-                    dark *= 1f - rim(x, y, low) * levels[0]
-                    dark *= 1f - (1f - lidDistance(x, y) / mid.thickness).coerceIn(0f, 1f) * levels[1]
-                    dark *= 1f - rim(x, y, high) * levels[2]
+                    // Parpados o rendija como linea con su grosor real. En el ojo
+                    // humano la iris y la pupila solo se ven dentro de los parpados
+                    val (inside, distance) = lidDistance(x, y)
+                    val keep = if (restPose == RestPose.HUMAN_EYE) {
+                        val clip = (0.5f + (if (inside) distance else -distance) / 0.6f).coerceIn(0f, 1f)
+                        1f - eyeClosed * (1f - clip)
+                    } else 1f
+                    dark *= 1f - rim(x, y, low) * levels[0] * keep
+                    dark *= 1f - (1f - distance / mid.thickness).coerceIn(0f, 1f) * levels[1]
+                    dark *= 1f - rim(x, y, high) * levels[2] * keep
                 } else {
                     for (i in rings.indices) dark *= 1f - rim(x, y, rings[i]) * levels[i]
                 }
@@ -384,9 +407,10 @@ class AudioBlobSimulation {
     }
 
     /**
-     * Contorno de la rendija: del diamante (abierto) a una almendra vertical
-     * con puntas afiladas (reposo), punto por punto. La almendra son dos
-     * parabolas x = ±W·(1 − (y/H)²), que se juntan en angulo en y = ±H.
+     * Contorno de los parpados o la rendija: del diamante (abierto) a una
+     * almendra con puntas afiladas (reposo), punto por punto. La almendra son
+     * dos parabolas que se juntan en angulo: horizontal en el ojo humano,
+     * y = ±H·(1 − (x/W)²); vertical en el gato, x = ±W·(1 − (y/H)²).
      */
     private fun buildLid(closed: Float) {
         for (i in 0 until EYE_POINTS) {
@@ -394,26 +418,29 @@ class AudioBlobSimulation {
             val c = cos(theta)
             val s = sin(theta)
             val r = mid.radius(theta)
-            val almondX = SLIT_WIDTH * c * abs(c)
-            val almondY = SLIT_HEIGHT * s
+            val cat = restPose == RestPose.CAT_EYE
+            val almondX = if (cat) SLIT_WIDTH * c * abs(c) else HUMAN_WIDTH * c
+            val almondY = if (cat) SLIT_HEIGHT * s else HUMAN_HEIGHT * s * abs(s)
             lid[2 * i] = mid.x + lerp(r * c, almondX, closed)
             lid[2 * i + 1] = mid.y + lerp(r * s, almondY, closed)
         }
     }
 
-    /** Distancia de (x, y) a la linea de la rendija, en celdas. */
-    private fun lidDistance(x: Float, y: Float): Float {
+    /** Si (x, y) cae dentro del contorno y a que distancia de su linea, en celdas. */
+    private fun lidDistance(x: Float, y: Float): Pair<Boolean, Float> {
+        var inside = false
         var best = Float.MAX_VALUE
         var j = EYE_POINTS - 1
         for (i in 0 until EYE_POINTS) {
             val ax = lid[2 * j]; val ay = lid[2 * j + 1]
             val bx = lid[2 * i]; val by = lid[2 * i + 1]
+            if ((ay > y) != (by > y) && x < ax + (y - ay) / (by - ay) * (bx - ax)) inside = !inside
             val ex = bx - ax; val ey = by - ay
             val t = (((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey + 1e-6f)).coerceIn(0f, 1f)
             best = minOf(best, hypot(x - ax - t * ex, y - ay - t * ey))
             j = i
         }
-        return best
+        return inside to best
     }
 
     /**
@@ -421,7 +448,7 @@ class AudioBlobSimulation {
      * La iris se mueve la mitad que la rendija y el brillo.
      */
     private fun lookShift(ring: Ring): Float {
-        if (!EYE_REST) return 0f
+        if (restPose != RestPose.CAT_EYE) return 0f
         val look = LOOK * tanh(3f * sin(2f * PI_F * time / LOOK_PERIOD)) * (1f - eyeOpen)
         return if (ring === low) 0.5f * look else look
     }

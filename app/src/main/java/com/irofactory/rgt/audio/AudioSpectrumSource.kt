@@ -62,9 +62,12 @@ class AudioSpectrumSource(private val context: Context) {
             return false
         }
         return try {
-            val captureSize = Visualizer.getCaptureSizeRange()[1]
             val v = Visualizer(0)
-            v.captureSize = captureSize
+            // Dentro de un proceso los Visualizer de la session 0 comparten el
+            // mismo efecto: si otro ya esta encendido, este nace encendido y su
+            // tamano de captura ya no se puede cambiar. Se usa el que trae.
+            if (!v.enabled) v.captureSize = Visualizer.getCaptureSizeRange()[1]
+            val captureSize = v.captureSize
             hasMeasurement = try {
                 v.measurementMode = Visualizer.MEASUREMENT_MODE_PEAK_RMS
                 true

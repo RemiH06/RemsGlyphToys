@@ -80,10 +80,12 @@ import kotlin.random.Random
  *     entre si ([SolidPieces]).
  *   - oscuridad: todo se apaga y, con la musica, vuelve desvaneciendose.
  *   - reloj: los contornos de las tres figuras se convierten, punto por
- *     punto, en los trazos de la hora actual (HH:MM): el hexagono dibuja las
- *     decenas de la hora, el diamante las unidades de la hora y las decenas
- *     de los minutos (la mitad de su contorno cada una) y el triangulo las
- *     unidades de los minutos. Vuelven a sus figuras igual, punto por punto.
+ *     punto, en los trazos de la hora actual en 12 horas (HH:MM): el
+ *     hexagono dibuja las decenas de la hora, el diamante las unidades de la
+ *     hora y las decenas de los minutos (la mitad de su contorno cada una) y
+ *     el triangulo las unidades de los minutos. Una letra A o P aparte (no
+ *     sale de ninguna figura, como el ":") marca am/pm. Vuelven a sus
+ *     figuras igual, punto por punto.
  * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
  * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
  * cada particula viaja a un punto del contorno de su figura, y cada pieza se
@@ -185,6 +187,18 @@ class AudioBlobSimulation {
         val CLOCK_LEFT = floatArrayOf(-9.8f, -5.2f, 2.2f, 6.8f)
         const val COLON_RADIUS = 0.55f
         const val COLON_LEVEL = 0.5f
+        // Indicador am/pm ("AM" o "PM"): letras mas chicas que los digitos,
+        // centradas debajo del reloj (los digitos no se mueven); espacio
+        // entre las dos letras, grosor y brillo de su trazo
+        const val LETTER_SCALE = 1.7f
+        const val LETTER_GAP = 0.6f
+        const val LETTER_SPACING = 1.9f
+        val LETTER_WIDTH = 2f * LETTER_SCALE
+        val LETTER_LEFT = -(2f * LETTER_WIDTH + LETTER_SPACING) / 2f
+        val LETTER_M_LEFT = LETTER_LEFT + LETTER_WIDTH + LETTER_SPACING
+        val LETTER_TOP = ClockDigits.HEIGHT / 2f + LETTER_GAP
+        const val LETTER_THICKNESS = 0.75f
+        const val LETTER_LEVEL = 0.5f
 
         // Segundos que tardan el agua o las piezas en volver a ser las figuras;
         // antes, el agua se reparte pegada al borde (radio y grosor de esa capa)
@@ -620,6 +634,10 @@ class AudioBlobSimulation {
                         dark *= 1f - (1f - d / rings[i].thickness).coerceIn(0f, 1f) * levels[i]
                     }
                     for (dot in clock.colons) dark *= 1f - colonDot(x, y, dot) * COLON_LEVEL * light * clock.rest
+                    for (i in clock.letters.indices) {
+                        val letterD = strokeDistance(clock.letters[i], clock.letterSubs[i], x, y)
+                        dark *= 1f - (1f - letterD / LETTER_THICKNESS).coerceIn(0f, 1f) * LETTER_LEVEL * light * clock.rest
+                    }
                 } else if (midOutline) {
                     val distance = lidDistance(x, y)
                     dark *= 1f - rim(x, y, low) * levels[0]
@@ -705,12 +723,21 @@ class AudioBlobSimulation {
         return best
     }
 
-    /** Contornos de las tres figuras mezclados hacia los trazos de la hora, y los dos puntos de ":". */
-    private class ClockOverlay(val points: Array<FloatArray>, val subIds: Array<IntArray>, val colons: Array<FloatArray>, val rest: Float)
+    /** Contornos de las tres figuras mezclados hacia los trazos de la hora, los dos puntos de ":" y la letra am/pm. */
+    private class ClockOverlay(
+        val points: Array<FloatArray>, val subIds: Array<IntArray>, val colons: Array<FloatArray>,
+        val letters: Array<FloatArray>, val letterSubs: Array<IntArray>, val rest: Float
+    )
 
-    /** Arma [ClockOverlay] para el reposo "reloj": [rest] 0 = las figuras tal cual, 1 = la hora. */
+    /**
+     * Arma [ClockOverlay] para el reposo "reloj": [rest] 0 = las figuras tal
+     * cual, 1 = la hora. 12 horas con indicador am/pm (letra A o P, ya que no
+     * hay una cuarta figura de donde sacar dos letras completas).
+     */
     private fun buildClock(rest: Float): ClockOverlay {
-        val h1 = clockHour / 10; val h2 = clockHour % 10
+        val h12 = clockHour % 12
+        val hour12 = if (h12 == 0) 12 else h12
+        val h1 = hour12 / 10; val h2 = hour12 % 10
         val m1 = clockMinute / 10; val m2 = clockMinute % 10
         val lowRing = ringToDigit(low, { th -> val r = low.radius(th); r * cos(th) to r * sin(th) },
             0f, 2f * PI_F, h1, CLOCK_LEFT[0], CLOCK_POINTS, rest, 0)
@@ -722,10 +749,12 @@ class AudioBlobSimulation {
             floatArrayOf(0f, CLOCK_TOP + 1.3f * ClockDigits.SCALE),
             floatArrayOf(0f, CLOCK_TOP + 2.7f * ClockDigits.SCALE)
         )
+        val (letter, letterSub) = ClockDigits.letterPoints(clockHour >= 12, LETTER_LEFT, LETTER_TOP, LETTER_SCALE, CLOCK_POINTS)
+        val (letterM, letterMSub) = ClockDigits.letterMPoints(LETTER_M_LEFT, LETTER_TOP, LETTER_SCALE, CLOCK_POINTS)
         return ClockOverlay(
             arrayOf(lowRing.first, midA.first + midB.first, highRing.first),
             arrayOf(lowRing.second, midA.second + midB.second, highRing.second),
-            colons, rest
+            colons, arrayOf(letter, letterM), arrayOf(letterSub, letterMSub), rest
         )
     }
 

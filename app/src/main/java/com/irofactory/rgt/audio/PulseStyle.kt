@@ -15,15 +15,14 @@ enum class HighShape(@StringRes val label: Int) {
 /** Figura de las voces. */
 enum class MidShape(@StringRes val label: Int) {
     DIAMOND(R.string.shape_diamond),
-    /** Siempre del mismo largo, horizontal: lo que suena solo lo abre. */
-    FLAT_DIAMOND(R.string.shape_flat_diamond)
+    /** Almendra horizontal con puntas, siempre del mismo largo: lo que suena solo la abre. */
+    ALMOND(R.string.shape_almond)
 }
 
 /** Figura de los graves. */
 enum class LowShape(@StringRes val label: Int) {
     HEXAGON(R.string.shape_hexagon),
-    /** Estrella de seis puntas. */
-    STAR(R.string.shape_star)
+    PENTAGON(R.string.shape_pentagon)
 }
 
 /** Como se ve el bombo. */

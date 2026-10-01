@@ -23,7 +23,7 @@ enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false)
     MELT(R.string.rest_melt, usesGravity = true),
     /** Las figuras como poligonos solidos que caen con la gravedad y chocan entre si. */
     PIECES(R.string.rest_pieces, usesGravity = true),
-    /** Todo se apaga en silencio y vuelve a aparecer desvaneciendose. */
+    /** Oscuridad: todo se apaga en silencio y vuelve a aparecer desvaneciendose. */
     VANISH(R.string.rest_vanish);
 
     companion object {

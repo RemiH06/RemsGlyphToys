@@ -40,7 +40,7 @@ internal class SolidPieces {
         const val CONTACT_SPIN_DAMPING = 6f
     }
 
-    private class Body(val sides: Int, val radius: Float, val startX: Float, val startY: Float) {
+    private class Body(var sides: Int, val radius: Float, val startX: Float, val startY: Float) {
         var x = startX
         var y = startY
         var angle = 0f
@@ -49,7 +49,7 @@ internal class SolidPieces {
         var spin = 0f
         val mass = radius * radius
         val inertia = 0.4f * mass * radius * radius
-        val reach = radius * (1f + cos(PI_F / sides)) / 2f
+        val reach get() = radius * (1f + cos(PI_F / sides)) / 2f
     }
 
     private val bodies = arrayOf(
@@ -58,12 +58,16 @@ internal class SolidPieces {
         Body(sides = 3, radius = 4.2f, startX = 3.5f, startY = -4f)
     )
 
-    /** De vuelta a su lugar de salida, quietas, con los angulos dados (hexagono, diamante, triangulo). */
-    fun reset(angles: FloatArray) {
+    /**
+     * De vuelta a su lugar de salida, quietas, con los angulos y lados dados
+     * (graves, voces, agudos): cada pieza es la figura que se eligio.
+     */
+    fun reset(angles: FloatArray, sides: IntArray) {
         for ((i, b) in bodies.withIndex()) {
             b.x = b.startX; b.y = b.startY
             b.vx = 0f; b.vy = 0f; b.spin = 0f
             b.angle = angles[i]
+            b.sides = sides[i]
         }
     }
 

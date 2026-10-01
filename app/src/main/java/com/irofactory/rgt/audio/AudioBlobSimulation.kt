@@ -43,7 +43,7 @@ import kotlin.random.Random
  *   - afuera: vive fuera de la matriz. Si la cancion tiene bombo marcado,
  *     cada golpe lo mete al borde como una banda irregular (blob, con forma
  *     nueva en cada golpe) con un destello, y se retira sin prisa hacia
- *     afuera, ya al brillo minimo, hasta desaparecer.
+ *     afuera, ya al brillo minimo, hasta perderse.
  *   - adentro: en reposo es una bolita tenue; cada golpe la lanza al borde
  *     con un destello y regresa sin prisa, ya al brillo minimo.
  *   - onda: se abre hasta el borde mientras la cancion tiene bombo, destella
@@ -52,8 +52,9 @@ import kotlin.random.Random
  *
  * Figuras ([style]): los agudos pueden ser triangulo o circulo (sin vertices;
  * con sonido aspero le salen puntas cortas), las voces diamante o diamante
- * aplanado (horizontal y siempre del mismo largo: lo que suena solo lo abre)
- * y los graves hexagono o estrella de seis puntas.
+ * almendra (horizontal, con puntas y siempre del mismo largo: lo que suena
+ * solo la abre; con el reposo centro se lee como un ojo) y los graves
+ * hexagono o pentagono.
  *
  * Reposo ([restPose], elegido en la app). Salvo en centro, que tanto se
  * forma el reposo sigue al volumen ([awake]); con musica todo vuelve a su
@@ -80,7 +81,7 @@ import kotlin.random.Random
  *     fluid) que cae hacia el suelo.
  *   - piezas: las figuras como poligonos regulares solidos que caen y chocan
  *     entre si ([SolidPieces]).
- *   - desaparecer: todo se apaga y, con la musica, vuelve desvaneciendose.
+ *   - oscuridad: todo se apaga y, con la musica, vuelve desvaneciendose.
  * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
  * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
  * cada particula viaja a un punto del contorno de su figura, y cada pieza se
@@ -109,13 +110,12 @@ class AudioBlobSimulation {
         const val CLEARANCE = 0.8f
         // Largo maximo de las puntas con dureza total, relativo al tamano de la figura
         const val SPIKE = 0.45f
-        // Estrella: radio de sus valles respecto a las puntas y que tan afiladas son
-        const val STAR_INNER = 0.55f
-        const val STAR_SHARPNESS = 2.5f
         // Circulo: cuantas puntas cortas le salen con sonido aspero
         const val CIRCLE_SPIKES = 8
-        // Diamante aplanado: media anchura fija, horizontal
-        const val FLAT_HALF_WIDTH = 10.5f
+        // Almendra: media anchura fija, horizontal
+        const val ALMOND_HALF_WIDTH = 10.5f
+        // Lados de la pieza solida de un circulo (en el reposo piezas)
+        const val CIRCLE_PIECE_SIDES = 12
         // Energia del diamante sin linea melodica (instrumental): sus bandas tienen
         // su propio control de ganancia y sin esto crece igual con guitarra o piano
         const val MID_WITHOUT_MELODY = 0.35f
@@ -197,15 +197,15 @@ class AudioBlobSimulation {
         const val EYE_POINTS = 72
     }
 
-    private enum class Form { POLYGON, CIRCLE, STAR }
+    private enum class Form { POLYGON, CIRCLE }
 
     /**
      * Una figura: circulo deformado por el armonico de [sides] lobulos (su
      * poligono redondeado) mas lobulos organicos que la hacen respirar. Con
-     * [form] puede ser circulo o estrella en vez de poligono.
+     * [form] puede ser circulo en vez de poligono.
      */
     private class Ring(
-        val sides: Int,
+        var sides: Int,
         val shapeAmp: Float,
         orientation: Float,
         val turnRate: Float,
@@ -250,16 +250,13 @@ class AudioBlobSimulation {
         private val spikeSharpness get() = 1f + 10f * harshness
         private val lobeReach get() = 0.5f * lobes.indices.sumOf { (lobeAmp[it] * lobeLevel[it]).toDouble() }.toFloat()
         val outer get() = (size * (1f + definition + spikeLength) + lobeReach) * squeeze
-        val inner get() = ((size * (if (form == Form.STAR) STAR_INNER else 1f - definition) - lobeReach) * squeeze)
-            .coerceAtLeast(0.5f)
+        val inner get() = ((size * (1f - definition) - lobeReach) * squeeze).coerceAtLeast(0.5f)
 
         fun radius(theta: Float): Float {
             val wave = cos(sides * (theta - rotation))
             var base = when (form) {
                 Form.POLYGON -> 1f + definition * wave
                 Form.CIRCLE -> 1f
-                // Estrella: el perfil del vertice elevado a una potencia deja puntas y valles
-                Form.STAR -> STAR_INNER + (1f - STAR_INNER) * (0.5f + 0.5f * wave).pow(STAR_SHARPNESS)
             }
             if (polygonBlend > 0f && form == Form.POLYGON) {
                 // Poligono regular en polares: la apotema entre el coseno del angulo al medio de su lado
@@ -321,9 +318,9 @@ class AudioBlobSimulation {
         set(value) {
             field = value
             high.form = if (value.high == HighShape.CIRCLE) Form.CIRCLE else Form.POLYGON
-            low.form = if (value.low == LowShape.STAR) Form.STAR else Form.POLYGON
+            low.sides = if (value.low == LowShape.PENTAGON) 5 else 6
         }
-    private val midFlat get() = style.mid == MidShape.FLAT_DIAMOND
+    private val midAlmond get() = style.mid == MidShape.ALMOND
     // Onda del bombo: que tan abierta esta (0 = bolita, 1 = en el borde)
     private var kickOpen = 0f
 
@@ -332,7 +329,7 @@ class AudioBlobSimulation {
     @Volatile private var gravityY = 9.81f
     private var plumbSpin = 0f
 
-    // Derretir, piezas y desaparecer: si ya cambiaron de estado y cuanto se ven
+    // Derretir, piezas y oscuridad: si ya cambiaron de estado y cuanto se ven
     // (0 = figuras, 1 = agua, piezas o nada)
     private var transformed = false
     private var transformedShown = 0f
@@ -494,15 +491,15 @@ class AudioBlobSimulation {
             ring.x += (tx - ring.x) * follow
             ring.y += (ty - ring.y) * follow
         }
-        if (isEye || midFlat) {
+        if (isEye || midAlmond) {
             // El diamante tiene simetria de 1/4 de vuelta: se envuelve a ±45° y,
-            // al cerrarse el ojo (o siempre, si es el aplanado), gira hasta
+            // al cerrarse el ojo (o siempre, si es la almendra), gira hasta
             // dejar sus vertices en horizontal
             val quarter = PI_F / 2f
             var a = mid.rotation % quarter
             if (a > quarter / 2f) a -= quarter
             if (a < -quarter / 2f) a += quarter
-            val pull = if (midFlat) 1f else 1f - awake
+            val pull = if (midAlmond) 1f else 1f - awake
             mid.rotation = a * (1f - pull * (1f - exp(-dt / 0.3f)))
         }
         if (restPose == RestPose.PLUMB) {
@@ -532,8 +529,8 @@ class AudioBlobSimulation {
             var nest = smoothstep(CROSS, CROSS + CROSS_BLEND, big.size - small.size)
             // En reposo los parpados o la rendija no empujan ni los empujan: van encima
             when {
-                // Diamante aplanado: su largo cruza a las demas, sin empujarlas
-                midFlat && (big === mid || small === mid) -> nest = 0f
+                // Almendra: su largo cruza a las demas, sin empujarlas
+                midAlmond && (big === mid || small === mid) -> nest = 0f
                 // Ojos: los parpados o la rendija van encima de las demas
                 isEye && (big === mid || small === mid) -> nest *= awake
                 // Logo y boom: sus tamanos ya estan elegidos, sin empujarse
@@ -596,8 +593,8 @@ class AudioBlobSimulation {
         if (restPose == RestPose.VANISH) kickLevel *= ringsShown
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash * (if (style.kick == KickStyle.WAVE) kickOpen else 1f))
         val eyeClosed = if (isEye) 1f - awake else 0f
-        // Parpados, rendija o diamante aplanado: el diamante se dibuja como contorno con su grosor real
-        val midOutline = eyeClosed > 0.001f || midFlat
+        // Parpados, rendija o almendra: el diamante se dibuja como contorno con su grosor real
+        val midOutline = eyeClosed > 0.001f || midAlmond
         if (midOutline) buildLid(eyeClosed)
 
         for (row in 0 until n) {
@@ -665,12 +662,21 @@ class AudioBlobSimulation {
             val s = sin(theta)
             val r = mid.radius(theta)
             val cat = restPose == RestPose.CAT_EYE
-            // Aplanado: se estira a lo ancho hasta su largo fijo (si ya es mas grande, queda igual)
-            val flatX = if (midFlat) (FLAT_HALF_WIDTH / (mid.size * mid.squeeze).coerceAtLeast(0.5f)).coerceAtLeast(1f) else 1f
+            // Con musica: el diamante, o la almendra de largo fijo que el tamano solo
+            // abre (hasta volverse tan alta como larga); los lobulos y puntas la
+            // deforman en la misma proporcion que al diamante
+            var openX = r * c
+            var openY = r * s
+            if (midAlmond) {
+                val size = (mid.size * mid.squeeze).coerceAtLeast(0.5f)
+                val opening = size.coerceAtMost(ALMOND_HALF_WIDTH)
+                openX = ALMOND_HALF_WIDTH * c * r / size
+                openY = opening * s * abs(s) * r / size
+            }
             val almondX = if (cat) SLIT_WIDTH * c * abs(c) else HUMAN_WIDTH * c
             val almondY = if (cat) SLIT_HEIGHT * s else HUMAN_HEIGHT * s * abs(s)
-            lid[2 * i] = mid.x + lerp(r * c * flatX, almondX, closed)
-            lid[2 * i + 1] = mid.y + lerp(r * s, almondY, closed)
+            lid[2 * i] = mid.x + lerp(openX, almondX, closed)
+            lid[2 * i + 1] = mid.y + lerp(openY, almondY, closed)
         }
     }
 
@@ -710,10 +716,10 @@ class AudioBlobSimulation {
     }
 
     /**
-     * Derretir, piezas y desaparecer: con el silencio las figuras se vuelven
+     * Derretir, piezas y oscuridad: con el silencio las figuras se vuelven
      * agua o piezas (una vez, tal como estaban) o se apagan, y al volver la
      * musica regresan: reconstruyendose desde el agua o las piezas, o
-     * desvaneciendose en desaparecer. Cambian al bajar de SOLIDIFY y regresan
+     * desvaneciendose en oscuridad. Cambian al bajar de SOLIDIFY y regresan
      * solo al volver arriba de REFORM: con un solo umbral parpadearian en
      * cuanto el volumen ronde ese valor.
      */
@@ -740,7 +746,10 @@ class AudioBlobSimulation {
                 transformedShown = 1f
             } else if (restPose == RestPose.PIECES) {
                 // Sin desvanecer: cada figura se transforma en su pieza
-                pieces.reset(floatArrayOf(low.rotation, mid.rotation, high.rotation))
+                pieces.reset(
+                    floatArrayOf(low.rotation, mid.rotation, high.rotation),
+                    rings.map { if (it.form == Form.CIRCLE) CIRCLE_PIECE_SIDES else it.sides }.toIntArray()
+                )
                 solidify = 0f
                 transformedShown = 1f
             }

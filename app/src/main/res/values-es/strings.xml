@@ -37,7 +37,7 @@
     <string name="rest_plumb">plomada</string>
     <string name="rest_melt">derretir</string>
     <string name="rest_pieces">piezas</string>
-    <string name="rest_vanish">desaparecer</string>
+    <string name="rest_vanish">oscuridad</string>
 
     <!-- Pantalla de pulse -->
     <string name="pulse_customize">> personalizar</string>
@@ -49,9 +49,9 @@
     <string name="shape_triangle">triángulo</string>
     <string name="shape_circle">círculo</string>
     <string name="shape_diamond">diamante</string>
-    <string name="shape_flat_diamond">diamante aplanado</string>
+    <string name="shape_almond">almendra</string>
     <string name="shape_hexagon">hexágono</string>
-    <string name="shape_star">estrella</string>
+    <string name="shape_pentagon">pentágono</string>
     <string name="kick_outside">blob afuera</string>
     <string name="kick_inside">blob adentro</string>
     <string name="kick_wave">onda</string>

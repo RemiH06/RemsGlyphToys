@@ -33,9 +33,11 @@ import kotlin.random.Random
  *     mas rapido entre mas rapido nada y se acorta al barrer de lado a lado
  *     (escorzo); al dar la vuelta el cuerpo se adelgaza hasta ponerse de
  *     frente y reaparece del otro lado. Se inclina al subir o bajar.
- *   - burbujas: suben sin parar desde abajo, las grandes mas rapido y
- *     bamboleandose mas; crecen un poco al subir (menos presion) y revientan
- *     al llegar arriba. Dos chorritos de burbujas chicas, como en una pecera.
+ *   - burbujas: suben sin parar en contra de la gravedad (acelerometro): al
+ *     girar el telefono cada una cambia de rumbo desde donde esta. Las grandes
+ *     suben mas rapido y se bambolean mas; crecen un poco al subir (menos
+ *     presion) y revientan al llegar arriba. Dos chorritos de burbujas chicas
+ *     salen del fondo, como en una pecera.
  */
 internal class RestScenes {
 
@@ -76,12 +78,13 @@ internal class RestScenes {
     private val random = Random(17)
     private var time = 0f
 
-    fun step(dt: Float, pose: RestPose) {
+    /** [gx], [gy]: gravedad en m/s², ejes de la matriz (y hacia abajo); la usan las burbujas. */
+    fun step(dt: Float, pose: RestPose, gx: Float = 0f, gy: Float = 9.81f) {
         time += dt
         when (pose) {
             RestPose.JELLYFISH -> stepJelly(dt)
             RestPose.FISH -> stepFish(dt)
-            RestPose.BUBBLES -> stepBubbles(dt)
+            RestPose.BUBBLES -> stepBubbles(dt, gx, gy)
             else -> {}
         }
     }
@@ -366,21 +369,31 @@ internal class RestScenes {
 
     // ── Burbujas ────────────────────────────────────────────────────────────
 
-    private class Bubble(var x0: Float, var y: Float, var r: Float, val speed: Float,
-                         var phase: Float, val amp: Float, val freq: Float, val big: Boolean) {
-        val x get() = x0 + amp * sin(phase)
-    }
+    /** Burbuja: centro sin bamboleo ([bx], [by]); el bamboleo va de lado respecto a "arriba". */
+    private class Bubble(var bx: Float, var by: Float, var r: Float, val speed: Float,
+                         var phase: Float, val amp: Float, val freq: Float, val big: Boolean)
 
     private val bubbles = ArrayList<Bubble>()
     private val pops = ArrayList<FloatArray>()   // x, y, radio, edad
-    private val streamX = floatArrayOf(-4.5f, 5f)
+    private val streamOffset = floatArrayOf(-4.5f, 5f)
     private val streamTimer = floatArrayOf(0f, 0.2f)
     private var bubblesReady = false
+    // "Arriba" (contra la gravedad), suavizado para que un temblor no las sacuda
+    private var upX = 0f
+    private var upY = -1f
 
-    private fun bigBubble(y: Float): Bubble {
+    private fun bubbleX(b: Bubble) = b.bx - upY * b.amp * sin(b.phase)
+    private fun bubbleY(b: Bubble) = b.by + upX * b.amp * sin(b.phase)
+
+    /** Nace abajo (del lado contrario a "arriba"), a [depth] celdas del centro y [side] de lado. */
+    private fun bubbleAt(depth: Float, side: Float, r: Float, speed: Float, amp: Float, freq: Float, big: Boolean) =
+        Bubble(-upX * depth - upY * side, -upY * depth + upX * side, r, speed,
+            TWO_PI * random.nextFloat(), amp, freq, big)
+
+    private fun bigBubble(depth: Float): Bubble {
         val r = 0.9f + 1.4f * random.nextFloat()
-        return Bubble(-8f + 16f * random.nextFloat(), y, r, 1.6f + 1.6f * r,
-            TWO_PI * random.nextFloat(), 0.2f + 0.25f * r, 2.2f + random.nextFloat(), big = true)
+        return bubbleAt(depth, -8f + 16f * random.nextFloat(), r, 1.6f + 1.6f * r,
+            0.2f + 0.25f * r, 2.2f + random.nextFloat(), big = true)
     }
 
     private fun initBubbles() {
@@ -388,28 +401,39 @@ internal class RestScenes {
         bubblesReady = true
     }
 
-    private fun stepBubbles(dt: Float) {
+    private fun stepBubbles(dt: Float, gx: Float, gy: Float) {
+        val g = hypot(gx, gy)
+        if (g > 0.5f) {
+            val follow = 1f - exp(-dt / 0.15f)
+            upX += (-gx / g - upX) * follow
+            upY += (-gy / g - upY) * follow
+            val len = hypot(upX, upY).coerceAtLeast(1e-3f)
+            upX /= len; upY /= len
+        }
         if (!bubblesReady) initBubbles()
-        for (k in streamX.indices) {
+        for (k in streamOffset.indices) {
             streamTimer[k] -= dt
             if (streamTimer[k] <= 0f) {
                 streamTimer[k] = STREAM_INTERVAL * (0.6f + 0.8f * random.nextFloat())
-                bubbles += Bubble(streamX[k] + 0.6f * (random.nextFloat() - 0.5f), 13f,
-                    0.35f + 0.25f * random.nextFloat(), 2.2f + 0.6f * random.nextFloat(),
-                    TWO_PI * random.nextFloat(), 0.2f, 6f, big = false)
+                bubbles += bubbleAt(13f, streamOffset[k] + 0.6f * (random.nextFloat() - 0.5f),
+                    0.35f + 0.25f * random.nextFloat(), 2.2f + 0.6f * random.nextFloat(), 0.2f, 6f, big = false)
             }
         }
         val iterator = bubbles.listIterator()
         while (iterator.hasNext()) {
             val b = iterator.next()
             b.phase += b.freq * dt
-            b.y -= b.speed * dt
+            b.bx += upX * b.speed * dt
+            b.by += upY * b.speed * dt
             b.r *= 1f + 0.015f * dt
-            // Revienta al llegar al borde de arriba; las grandes vuelven a salir abajo
-            val x = b.x
-            val top = -sqrt((12.5f * 12.5f - x * x).coerceAtLeast(0f))
-            if (b.y < top + b.r * 0.5f) {
-                pops += floatArrayOf(x, b.y, b.r, 0f)
+            // Revienta al salir por el lado de arriba; las grandes vuelven a salir abajo.
+            // Si el telefono gira, las que quedaron lejos y yendose se quitan sin reventar
+            val x = bubbleX(b)
+            val y = bubbleY(b)
+            val outward = x * upX + y * upY > 0f
+            val d = hypot(x, y)
+            if (outward && d > 12.5f - b.r * 0.5f) {
+                if (d < 13f + b.r) pops += floatArrayOf(x, y, b.r, 0f)
                 iterator.remove()
                 if (b.big) iterator.add(bigBubble(13f + b.r + 3f * random.nextFloat()))
             }
@@ -420,15 +444,17 @@ internal class RestScenes {
     private fun drawBubbles() {
         if (!bubblesReady) initBubbles()
         for (b in bubbles) {
-            val x = b.x
+            val x = bubbleX(b)
+            val y = bubbleY(b)
             if (b.r < 0.8f) {
-                disc(x, b.y, b.r + 0.1f, 0.75f)
+                disc(x, y, b.r + 0.1f, 0.75f)
             } else {
-                cells(x - b.r, b.y - b.r, x + b.r, b.y + b.r) { col, row, cx, cy ->
-                    if (hypot(cx - x, cy - b.y) < b.r) put(col, row, 0.1f)
+                cells(x - b.r, y - b.r, x + b.r, y + b.r) { col, row, cx, cy ->
+                    if (hypot(cx - x, cy - y) < b.r) put(col, row, 0.1f)
                 }
-                ring(x, b.y, b.r, 0.55f, 0.85f)
-                disc(x - 0.4f * b.r, b.y - 0.4f * b.r, 0.35f, 1f)
+                ring(x, y, b.r, 0.55f, 0.85f)
+                // El brillo, arriba a la izquierda respecto a "arriba"
+                disc(x + (upX * 0.4f + upY * 0.4f) * b.r, y + (upY * 0.4f - upX * 0.4f) * b.r, 0.35f, 1f)
             }
         }
         for (p in pops) {

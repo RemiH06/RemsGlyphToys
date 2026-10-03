@@ -29,8 +29,8 @@ enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false,
     JELLYFISH(R.string.rest_jellyfish, isScene = true),
     /** Pez realista visto de lado, nadando y dando vueltas. */
     FISH(R.string.rest_fish, isScene = true),
-    /** Burbujas que suben sin parar y revientan arriba. */
-    BUBBLES(R.string.rest_bubbles, isScene = true);
+    /** Burbujas que suben sin parar, siempre en contra de la gravedad, y revientan arriba. */
+    BUBBLES(R.string.rest_bubbles, usesGravity = true, isScene = true);
 
     companion object {
         private const val PREFS = "pulse"

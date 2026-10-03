@@ -462,7 +462,7 @@ class AudioBlobSimulation {
             ring.polygonBlend = if (ring === high && (restPose == RestPose.LOGO || restPose == RestPose.PLUMB)) rest else 0f
         }
         stepTransformation(dt)
-        if (restPose.isScene && awake < 0.999f) scenes.step(dt, restPose)
+        if (restPose.isScene && awake < 0.999f) scenes.step(dt, restPose, gravityX, gravityY)
         if (KICK_RING && restPose == RestPose.BOOM) {
             // El blob entra y se queda; sus lobulos van a una forma tranquila y siguen girando
             val settle = rest * (1f - exp(-dt / 0.6f))

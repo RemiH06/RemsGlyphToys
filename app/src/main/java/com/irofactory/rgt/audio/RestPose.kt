@@ -6,7 +6,7 @@ import androidx.core.content.edit
 import com.irofactory.rgt.R
 
 /** Como se ve pulse en silencio. [label] es el texto del selector en la app. */
-enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false) {
+enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false, val isScene: Boolean = false) {
     /** Las tres figuras se juntan al centro. */
     CENTER(R.string.rest_center),
     /** Ojo de gato del tamano de la matriz: rendija vertical que mira de un lado a otro. */
@@ -24,7 +24,13 @@ enum class RestPose(@StringRes val label: Int, val usesGravity: Boolean = false)
     /** Oscuridad: todo se apaga en silencio y vuelve a aparecer desvaneciendose. */
     VANISH(R.string.rest_vanish),
     /** La hora actual: cada figura traza los digitos de la hora o los minutos. */
-    CLOCK(R.string.rest_clock);
+    CLOCK(R.string.rest_clock),
+    /** Medusa realista que nada a pulsos, con tentaculos que se quedan atras. */
+    JELLYFISH(R.string.rest_jellyfish, isScene = true),
+    /** Pez realista visto de lado, nadando y dando vueltas. */
+    FISH(R.string.rest_fish, isScene = true),
+    /** Burbujas que suben sin parar y revientan arriba. */
+    BUBBLES(R.string.rest_bubbles, isScene = true);
 
     companion object {
         private const val PREFS = "pulse"

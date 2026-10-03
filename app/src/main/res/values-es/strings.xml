@@ -38,6 +38,9 @@
     <string name="rest_pieces">piezas</string>
     <string name="rest_vanish">oscuridad</string>
     <string name="rest_clock">reloj</string>
+    <string name="rest_jellyfish">medusa</string>
+    <string name="rest_fish">pez</string>
+    <string name="rest_bubbles">burbujas</string>
 
     <!-- Pantalla de pulse -->
     <string name="pulse_customize">> personalizar</string>

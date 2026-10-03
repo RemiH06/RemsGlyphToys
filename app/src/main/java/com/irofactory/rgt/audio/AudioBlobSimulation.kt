@@ -86,6 +86,8 @@ import kotlin.random.Random
  *     el triangulo las unidades de los minutos. Una letra A o P aparte (no
  *     sale de ninguna figura, como el ":") marca am/pm. Vuelven a sus
  *     figuras igual, punto por punto.
+ *   - medusa, pez y burbujas: escenas propias ([RestScenes]) que no salen de
+ *     las figuras: las figuras se desvanecen y la escena aparece, y al revés.
  * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
  * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
  * cada particula viaja a un punto del contorno de su figura, y cada pieza se
@@ -199,6 +201,8 @@ class AudioBlobSimulation {
         val LETTER_TOP = ClockDigits.HEIGHT / 2f + LETTER_GAP
         const val LETTER_THICKNESS = 0.75f
         const val LETTER_LEVEL = 0.5f
+        // Brillo maximo de las escenas (medusa, pez, burbujas) antes del volumen
+        const val SCENE_LEVEL = 0.6f
 
         // Segundos que tardan el agua o las piezas en volver a ser las figuras;
         // antes, el agua se reparte pegada al borde (radio y grosor de esa capa)
@@ -372,6 +376,7 @@ class AudioBlobSimulation {
     private var solidify = -1f
     private val fluid by lazy { FlipFluidSimulation() }
     private val pieces by lazy { SolidPieces() }
+    private val scenes by lazy { RestScenes() }
     private val meltRandom = Random(5)
 
     // 0 = reposo formado .. 1 = musica, y contorno de los parpados o la rendija (x, y intercalados)
@@ -457,6 +462,7 @@ class AudioBlobSimulation {
             ring.polygonBlend = if (ring === high && (restPose == RestPose.LOGO || restPose == RestPose.PLUMB)) rest else 0f
         }
         stepTransformation(dt)
+        if (restPose.isScene && awake < 0.999f) scenes.step(dt, restPose)
         if (KICK_RING && restPose == RestPose.BOOM) {
             // El blob entra y se queda; sus lobulos van a una forma tranquila y siguen girando
             val settle = rest * (1f - exp(-dt / 0.6f))
@@ -497,7 +503,8 @@ class AudioBlobSimulation {
                 RestPose.BOOM -> lerp(BOOM_SIZE[i], target, awake)
                 RestPose.PLUMB -> lerp(PLUMB_SIZE[i], target, awake)
                 // Ocultas mientras son agua, piezas o nada: reposo normal, para volver desde el centro
-                RestPose.MELT, RestPose.PIECES, RestPose.VANISH -> target
+                RestPose.MELT, RestPose.PIECES, RestPose.VANISH,
+                RestPose.JELLYFISH, RestPose.FISH, RestPose.BUBBLES -> target
             }
             ring.size += (target - ring.size) * sizeFollow
 
@@ -589,6 +596,10 @@ class AudioBlobSimulation {
         val grid = Array(n) { FloatArray(n) }
         val light = 0.5f + 0.5f * loudness
         val levels = FloatArray(rings.size) { (0.4f + 0.6f * rings[it].energy) * light }
+        // Escenas: las figuras se desvanecen mientras la escena aparece
+        val sceneShown = if (restPose.isScene) 1f - awake else 0f
+        val sceneGrid = if (sceneShown > 0.001f) scenes.render(restPose) else null
+        for (i in levels.indices) levels[i] *= 1f - sceneShown
         if (restPose == RestPose.PLUMB) {
             // Marco tenue, triangulo protagonista
             val rest = 1f - awake
@@ -613,6 +624,7 @@ class AudioBlobSimulation {
             else (KICK_DIM + (1f - KICK_DIM) * kickFlash) * light
         if (restPose == RestPose.BOOM) kickLevel += (BOOM_LEVEL * light - kickLevel) * (1f - awake)
         if (restPose == RestPose.VANISH) kickLevel *= ringsShown
+        kickLevel *= 1f - sceneShown
         val kickThickness = KICK_THICKNESS * (1f + 0.6f * kickFlash * (if (style.kick == KickStyle.WAVE) kickOpen else 1f))
         val eyeClosed = if (isEye) 1f - awake else 0f
         // Parpados, rendija o almendra: el diamante se dibuja como contorno con su grosor real
@@ -664,6 +676,7 @@ class AudioBlobSimulation {
                     if (fluidGrid != null) dark *= 1f - fluidGrid[row][col] * MELT_LEVEL * transformedShown
                     if (restPose == RestPose.PIECES) dark *= 1f - pieces.brightness(x, y) * PIECES_LEVEL * transformedShown
                 }
+                if (sceneGrid != null) dark *= 1f - sceneGrid[row][col] * SCENE_LEVEL * light * sceneShown
                 grid[row][col] = 1f - dark
             }
         }

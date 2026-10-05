@@ -1,9 +1,8 @@
 package com.irofactory.rgt.glyph.toy
 
-import android.hardware.Sensor
 import android.hardware.SensorManager
 import com.irofactory.rgt.fluid.FlipFluidSimulation
-import com.irofactory.rgt.fluid.gravityListener
+import com.irofactory.rgt.fluid.GravitySampler
 import com.irofactory.rgt.glyph.GlyphFrames
 import com.nothing.ketchum.GlyphToy
 
@@ -22,15 +21,14 @@ class FluidGlyphToyService : AnimatedGlyphToyService("FluidGlyphToy") {
     private val sim = FlipFluidSimulation()
     private val mask = GlyphFrames.circularMask()
     private val sensorManager by lazy { getSystemService(SensorManager::class.java) }
-    private val listener by lazy { gravityListener(viewedFromBack = true, onGravity = sim::setGravity) }
+    private val gravity = GravitySampler(viewedFromBack = true)
 
     override fun onToyStart() {
-        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
+        gravity.register(sensorManager)
     }
 
     override fun onToyStop() {
-        sensorManager.unregisterListener(listener)
+        sensorManager.unregisterListener(gravity)
     }
 
     override fun onGlyphEvent(event: String) {
@@ -41,6 +39,7 @@ class FluidGlyphToyService : AnimatedGlyphToyService("FluidGlyphToy") {
     }
 
     override fun nextFrame(dt: Float): IntArray {
+        gravity.drain(sim::setGravity)
         sim.step(dt)
         return GlyphFrames.fromGrid(sim.rasterize(), mask)
     }

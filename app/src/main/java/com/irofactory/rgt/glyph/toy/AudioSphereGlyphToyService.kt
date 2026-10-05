@@ -1,12 +1,11 @@
 package com.irofactory.rgt.glyph.toy
 
-import android.hardware.Sensor
 import android.hardware.SensorManager
 import com.irofactory.rgt.audio.AudioBlobSimulation
 import com.irofactory.rgt.audio.AudioSpectrumSource
 import com.irofactory.rgt.audio.PulseStyle
 import com.irofactory.rgt.audio.RestPose
-import com.irofactory.rgt.fluid.gravityListener
+import com.irofactory.rgt.fluid.GravitySampler
 import com.irofactory.rgt.glyph.GlyphFrames
 
 /**
@@ -30,7 +29,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
     private val audioSource by lazy { AudioSpectrumSource(applicationContext) }
     private var retryIn = 0f
     private val sensorManager by lazy { getSystemService(SensorManager::class.java) }
-    private val gravity by lazy { gravityListener(viewedFromBack = true, onGravity = sim::setGravity) }
+    private val gravity = GravitySampler(viewedFromBack = true)
     private var listening = false
 
     override fun nextFrame(dt: Float): IntArray {
@@ -47,6 +46,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
         sim.restPose = RestPose.load(applicationContext)
         sim.style = PulseStyle.load(applicationContext)
         listenGravity(sim.restPose.usesGravity)
+        if (listening) gravity.drain(sim::setGravity)
         val now = java.time.LocalTime.now()
         sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence, audioSource.melody,
@@ -63,8 +63,7 @@ class AudioSphereGlyphToyService : AnimatedGlyphToyService("AudioSphereGlyphToy"
         if (on == listening) return
         listening = on
         if (on) {
-            val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            sensorManager.registerListener(gravity, accelerometer, SensorManager.SENSOR_DELAY_GAME)
+            gravity.register(sensorManager)
         } else {
             sensorManager.unregisterListener(gravity)
         }

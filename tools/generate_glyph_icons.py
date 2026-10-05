@@ -27,7 +27,7 @@ MASK = [[(N - w) // 2 <= c < (N - w) // 2 + w for c in range(N)] for w in ROW_SP
 
 ON_WHITE = "#F0F0F0"     # sherry --text, sin blanco puro
 OFF_DIM = "#262626"
-MAGENTA = "#FF2D78"      # sherry --magenta
+MAGENTA = "#FF1466"      # sherry --magenta
 BG_DARK = "#080808"      # sherry --bg
 
 

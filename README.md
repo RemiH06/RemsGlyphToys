@@ -89,7 +89,7 @@ ariadne generate
 - Toys without content or permission show a dim ring instead of going dark, to tell "nothing to show" apart from "not running"
 - In-app live previews that reuse the exact same engines as the toys
 - English and Spanish, following the phone's per-app language (Settings → Apps → Rem's Glyph Toys → Language)
-- sherry_theme UI: JetBrains Mono and VT323, neon accents with glow in dark mode, CRT scanlines
+- sherry_theme UI: JetBrains Mono for text and Doto (dot matrix) for titles, neon accents with glow in dark mode, CRT scanlines. Both fonts are under the SIL Open Font License 1.1; the app bundles Doto as a bold, Latin-only instance
 - Interactive architecture diagram generated with [Ariadne](https://github.com/RemiH06/Ariadne)
 
 ## Roadmap

@@ -8,24 +8,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.irofactory.rgt.R
 
-// sherry_theme: --mono JetBrains Mono para cuerpo, --display VT323 para titulos.
+// sherry_theme: --mono JetBrains Mono para cuerpo, --display Doto para
+// titulos (matriz de puntos, OFL; instancia fija en negrita, solo latin).
 val JetBrainsMono = FontFamily(
     Font(R.font.jetbrainsmono_regular, FontWeight.Normal),
     Font(R.font.jetbrainsmono_bold, FontWeight.Bold)
 )
 
-val Vt323 = FontFamily(Font(R.font.vt323_regular, FontWeight.Normal))
+val Doto = FontFamily(Font(R.font.doto_bold, FontWeight.Bold))
+
+// Doto es mas grande que VT323 al mismo tamaño (altura de mayuscula 0.69
+// contra 0.56 del em, y mas ancha): los tamaños cuidan que "REM'S GLYPH TOYS"
+// quepa junto al logo en un telefono.
+private fun doto(size: Int) = TextStyle(
+    fontFamily = Doto,
+    fontWeight = FontWeight.Bold,
+    fontSize = size.sp,
+    lineHeight = (size * 1.15f).sp,
+    letterSpacing = 0.sp
+)
 
 private val base = Typography()
 
 val Typography = Typography(
-    displayLarge   = base.displayLarge.copy(fontFamily = Vt323),
-    displayMedium  = base.displayMedium.copy(fontFamily = Vt323),
-    displaySmall   = base.displaySmall.copy(fontFamily = Vt323),
-    headlineLarge  = base.headlineLarge.copy(fontFamily = Vt323, fontSize = 40.sp),
-    headlineMedium = base.headlineMedium.copy(fontFamily = Vt323, fontSize = 34.sp, letterSpacing = 1.sp),
-    headlineSmall  = base.headlineSmall.copy(fontFamily = Vt323),
-    titleLarge     = base.titleLarge.copy(fontFamily = Vt323),
+    displayLarge   = doto(44),
+    displayMedium  = doto(36),
+    displaySmall   = doto(29),
+    headlineLarge  = doto(28),
+    headlineMedium = doto(26),
+    headlineSmall  = doto(20),
+    titleLarge     = doto(18),
     titleMedium    = base.titleMedium.copy(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold),
     titleSmall     = base.titleSmall.copy(fontFamily = JetBrainsMono, fontWeight = FontWeight.Bold),
     bodyLarge      = TextStyle(fontFamily = JetBrainsMono, fontSize = 15.sp, lineHeight = 25.sp),

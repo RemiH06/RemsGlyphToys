@@ -7,33 +7,34 @@
 <meta name="description" content="Cómo funciona pulse: del audio de salida del sistema a figuras personalizables en la Glyph Matrix, con bombo, línea melódica y reposos, con todas sus fórmulas.">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.bunny.net">
-<link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|vt323:400&display=swap" rel="stylesheet">
+<link href="https://fonts.bunny.net/css?family=jetbrains-mono:400,700|doto:700&display=swap" rel="stylesheet">
 <style>
 /* ── TOKENS OSCURO (default) · sherry_theme ── */
 body {
   --bg: #080808; --bg2: #0e0e0e; --bg3: #141414;
-  --text: #f0f0f0; --text2: #808080; --text3: #404040;
+  --text: #f0f0f0; --text2: #A8A8A8; --text3: #7F7F7F;
   --border: #1e1e1e; --border2: #2a2a2a;
-  --magenta: #FF2D78; --cyan: #00F5FF; --lime: #AAFF00; --violet: #BF5FFF; --electric: #FFE600;
+  --magenta: #FF1466; --cyan: #00F5FF; --lime: #39FF14; --violet: #AC4DFF; --electric: #FFE600;
   --lavender: #D4AAFF; --peach: #FFD4AA;
-  --accent: #FF2D78; --ok: #AAFF00; --warn: #FFE600; --info: #00F5FF;
+  --accent: #FF1466; --ok: #39FF14; --warn: #FFE600; --info: #00F5FF;
   --mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --display: 'VT323', 'JetBrains Mono', monospace;
+  --display: 'Doto', 'JetBrains Mono', monospace;
   --radius: 2px;
-  --glow-accent: 0 0 8px rgba(255,45,120,.5);
+  --glow-accent: 0 0 8px rgba(255,20,102,.55);
   --glow-cyan:   0 0 8px rgba(0,245,255,.5);
-  --glow-lime:   0 0 8px rgba(170,255,0,.5);
-  --glow-violet: 0 0 8px rgba(191,95,255,.5);
+  --glow-lime:   0 0 8px rgba(57,255,20,.55);
+  --glow-violet: 0 0 8px rgba(172,77,255,.6);
+  --glow-electric: 0 0 8px rgba(255,230,0,.45);
 }
 /* ── TOKENS CLARO ── */
 body.light {
   --bg: #F5F2EC; --bg2: #EDEAD2; --bg3: #E0DCCA;
-  --text: #0a0a0a; --text2: #4a4a4a; --text3: #9a9a9a;
+  --text: #0a0a0a; --text2: #3A3A3A; --text3: #5F5F5F;
   --border: #CCCAB8; --border2: #B8B6A4;
-  --magenta: #CC0055; --cyan: #007A80; --lime: #557700; --violet: #6622AA; --electric: #887700;
+  --magenta: #B2003F; --cyan: #006A6F; --lime: #2B6A10; --violet: #5A0FA8; --electric: #6C5E00;
   --lavender: #7744AA; --peach: #AA6633;
-  --accent: #CC0055; --ok: #557700; --warn: #887700; --info: #007A80;
-  --glow-accent: none; --glow-cyan: none; --glow-lime: none; --glow-violet: none;
+  --accent: #B2003F; --ok: #2B6A10; --warn: #6C5E00; --info: #006A6F;
+  --glow-accent: none; --glow-cyan: none; --glow-lime: none; --glow-violet: none; --glow-electric: none;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -63,15 +64,15 @@ a:hover { text-decoration: underline; }
 }
 .theme-btn:hover, .theme-btn[aria-pressed="true"], .btn:hover, .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); text-shadow: var(--glow-accent); }
 
-h1 { font-family: var(--display); font-weight: 400; font-size: clamp(44px, 9vw, 72px); line-height: .95; }
+h1 { font-family: var(--display); font-weight: 700; font-synthesis: none; font-size: clamp(36px, 7vw, 58px); line-height: 1.05; }
 h1 .dim { color: var(--text3); }
 h2 {
-  font-family: var(--display); font-size: 26px; font-weight: 400; line-height: 1.1;
-  color: var(--cyan); text-shadow: var(--glow-cyan); letter-spacing: .05em; text-transform: uppercase;
+  font-family: var(--display); font-size: 28px; font-weight: 700; font-synthesis: none; line-height: 1.15;
+  color: var(--cyan); text-shadow: var(--glow-cyan); letter-spacing: 0; text-transform: uppercase;
   margin: 0 0 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border2);
 }
 h2::before { content: '// '; color: var(--text3); }
-h3 { font-family: var(--display); font-size: 21px; font-weight: 400; color: var(--magenta); text-shadow: var(--glow-accent); letter-spacing: .05em; margin: 26px 0 10px; }
+h3 { font-family: var(--display); font-size: 22px; font-weight: 700; font-synthesis: none; color: var(--magenta); text-shadow: var(--glow-accent); letter-spacing: 0; margin: 26px 0 10px; }
 h3::before { content: '> '; color: var(--text3); }
 p { margin-bottom: 12px; }
 .muted { color: var(--text2); font-size: 12px; }
@@ -151,7 +152,7 @@ input[type=range]:focus-visible { outline: 1px dashed var(--accent); outline-off
 
 footer { padding: 28px 0 48px; border-top: 1px solid var(--border2); }
 footer p { font-size: 11px; color: var(--text2); margin: 0; }
-.prompt::before { content: '$ '; color: var(--lime); text-shadow: var(--glow-lime); }
+.prompt::before { content: '$ '; color: var(--electric); text-shadow: var(--glow-electric); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>

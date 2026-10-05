@@ -1,7 +1,6 @@
 package com.irofactory.rgt.audio
 
 import android.Manifest
-import android.hardware.Sensor
 import android.hardware.SensorManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,7 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.irofactory.rgt.fluid.gravityListener
+import com.irofactory.rgt.fluid.GravitySampler
 import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
 import com.irofactory.rgt.ui.components.SherryButton
 import com.irofactory.rgt.ui.theme.sherryColors
@@ -65,16 +64,12 @@ fun AudioSphereMatrixView(
     var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
     var hasPermission by remember { mutableStateOf(audioSource.hasPermission()) }
     // Gravedad aparte de la simulacion: el doble toque la reemplaza
-    val gravity = remember { floatArrayOf(0f, 9.81f) }
+    val gravity = remember { GravitySampler(viewedFromBack = false) }
 
     DisposableEffect(restPose.usesGravity) {
         val sensorManager = context.getSystemService(SensorManager::class.java)
-        val listener = gravityListener(viewedFromBack = false) { x, y -> gravity[0] = x; gravity[1] = y }
-        if (restPose.usesGravity) {
-            val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
-        }
-        onDispose { sensorManager.unregisterListener(listener) }
+        if (restPose.usesGravity) gravity.register(sensorManager)
+        onDispose { sensorManager.unregisterListener(gravity) }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -106,7 +101,7 @@ fun AudioSphereMatrixView(
             audioSource.update(dt)
             sim.restPose = currentPose
             sim.style = currentStyle
-            sim.setGravity(gravity[0], gravity[1])
+            gravity.drain(sim::setGravity)
             val now = java.time.LocalTime.now()
             sim.step(dt, audioSource.bands, audioSource.loudness, audioSource.harshness,
                 audioSource.kick, audioSource.kickPresence, audioSource.melody,

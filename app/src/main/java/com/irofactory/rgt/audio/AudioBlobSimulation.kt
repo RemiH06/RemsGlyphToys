@@ -88,7 +88,10 @@ import kotlin.random.Random
  *     figuras igual, punto por punto.
  *   - medusa, pez y burbujas: escenas propias ([RestScenes]) que no salen de
  *     las figuras: las figuras se desvanecen y la escena aparece, y al revés.
- * Plomada, derretir y piezas usan la gravedad de [setGravity]. Al volver la
+ * Plomada, derretir, piezas y burbujas usan la gravedad de [setGravity],
+ * con todo e impulso de una sacudida: derretir y piezas la reciben completa;
+ * la plomada y las burbujas la separan en "abajo" (lenta) y sacudida, que
+ * columpia al triangulo y empuja a las burbujas de lado. Al volver la
  * musica, el agua y las piezas se reconstruyen en las figuras en REFORM_TIME:
  * cada particula viaja a un punto del contorno de su figura, y cada pieza se
  * mueve, crece y pasa de poligono al contorno vivo.
@@ -172,6 +175,10 @@ class AudioBlobSimulation {
         const val PLUMB_STIFFNESS = 12f
         const val PLUMB_DAMPING = 2.5f
         const val PLUMB_FRAME = 0.35f
+        // Sacudida: segundos del filtro que separa la gravedad de la sacudida,
+        // y cuanto columpia a la plomada cada m/s² de lado
+        const val SLOW_GRAVITY = 0.5f
+        const val PLUMB_SHAKE = 0.4f
         // Derretir y piezas: volumen con el que la musica ya "cambio de estado"
         // (debajo: se derriten o caen; arriba: vuelven las figuras), brillo
         // desde el que un LED de las figuras ya es agua con densidad completa,
@@ -354,6 +361,12 @@ class AudioBlobSimulation {
     @Volatile private var gravityX = 0f
     @Volatile private var gravityY = 9.81f
     private var plumbSpin = 0f
+    // Gravedad lenta ("donde es abajo") y sacudida (lo que sobra); la plomada y
+    // las burbujas usan las dos por separado, el resto la gravedad completa
+    private var slowGX = 0f
+    private var slowGY = 9.81f
+    private var shakeX = 0f
+    private var shakeY = 0f
 
     // Derretir, piezas y oscuridad: si ya cambiaron de estado y cuanto se ven
     // (0 = figuras, 1 = agua, piezas o nada)
@@ -403,6 +416,13 @@ class AudioBlobSimulation {
         loudness = loud
         clockHour = hour
         clockMinute = minute
+        val gx = gravityX
+        val gy = gravityY
+        val slowFollow = 1f - exp(-dt / SLOW_GRAVITY)
+        slowGX += (gx - slowGX) * slowFollow
+        slowGY += (gy - slowGY) * slowFollow
+        shakeX = gx - slowGX
+        shakeY = gy - slowGY
 
         if (KICK_RING) {
             // Golpe nuevo: [kick] brinca de golpe y luego solo cae
@@ -462,7 +482,7 @@ class AudioBlobSimulation {
             ring.polygonBlend = if (ring === high && (restPose == RestPose.LOGO || restPose == RestPose.PLUMB)) rest else 0f
         }
         stepTransformation(dt)
-        if (restPose.isScene && awake < 0.999f) scenes.step(dt, restPose, gravityX, gravityY)
+        if (restPose.isScene && awake < 0.999f) scenes.step(dt, restPose, slowGX, slowGY, shakeX, shakeY)
         if (KICK_RING && restPose == RestPose.BOOM) {
             // El blob entra y se queda; sus lobulos van a una forma tranquila y siguen girando
             val settle = rest * (1f - exp(-dt / 0.6f))
@@ -534,10 +554,13 @@ class AudioBlobSimulation {
         if (restPose == RestPose.PLUMB) {
             // Resorte hacia el suelo; con simetria de 1/3 de vuelta, cualquier vertice sirve
             val third = 2f * PI_F / 3f
-            var error = (atan2(gravityY, gravityX) - high.rotation) % third
+            var error = (atan2(slowGY, slowGX) - high.rotation) % third
             if (error > third / 2f) error -= third
             if (error < -third / 2f) error += third
-            plumbSpin += (PLUMB_STIFFNESS * error - PLUMB_DAMPING * plumbSpin) * dt
+            // La sacudida de lado lo columpia, como a un pendulo
+            val g = hypot(slowGX, slowGY).coerceAtLeast(1e-3f)
+            val lateral = (-shakeX * slowGY + shakeY * slowGX) / g
+            plumbSpin += (PLUMB_STIFFNESS * error - PLUMB_DAMPING * plumbSpin + PLUMB_SHAKE * lateral) * dt
             high.rotation += plumbSpin * dt * rest
         }
         // Temblor leve de los agudos
@@ -825,9 +848,9 @@ class AudioBlobSimulation {
     /** Plomada: el triangulo cuelga un poco hacia donde apunta la gravedad. */
     private fun hang(ring: Ring): Pair<Float, Float> {
         if (restPose != RestPose.PLUMB || ring !== high) return 0f to 0f
-        val g = hypot(gravityX, gravityY).coerceAtLeast(1e-3f)
+        val g = hypot(slowGX, slowGY).coerceAtLeast(1e-3f)
         val k = PLUMB_HANG * (1f - awake) / g
-        return gravityX * k to gravityY * k
+        return slowGX * k to slowGY * k
     }
 
     /**

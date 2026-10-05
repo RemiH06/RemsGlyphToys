@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.irofactory.rgt.ui.components.GlyphMatrixCanvas
 import com.irofactory.rgt.ui.theme.sherryColors
 import kotlinx.coroutines.isActive
+import kotlin.math.hypot
 
 /**
  * Vista previa en pantalla del agua: el mismo FLIP y el mismo mapeo del
@@ -29,12 +30,11 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
     val sim = remember { FlipFluidSimulation() }
 
     val sensorManager = remember { context.getSystemService(SensorManager::class.java) }
-    val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
+    val gravity = remember { GravitySampler(viewedFromBack = false) }
 
     DisposableEffect(Unit) {
-        val listener = gravityListener(viewedFromBack = false, onGravity = sim::setGravity)
-        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_GAME)
-        onDispose { sensorManager.unregisterListener(listener) }
+        gravity.register(sensorManager)
+        onDispose { sensorManager.unregisterListener(gravity) }
     }
 
     var grid by remember { mutableStateOf<Array<FloatArray>?>(null) }
@@ -45,6 +45,7 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
             val currentTime = withFrameMillis { it }
             val dt = ((currentTime - lastTime) / 1000f).coerceIn(0.005f, 0.05f)
             lastTime = currentTime
+            gravity.drain(sim::setGravity)
             sim.step(dt)
             grid = sim.rasterize()
         }
@@ -64,12 +65,55 @@ fun FluidMatrixView(modifier: Modifier = Modifier) {
  * la Glyph Matrix por detras, asi que su izquierda y derecha estan
  * invertidas entre si: la vista previa niega el eje X y la matriz no
  * (ambos verificados en un Phone 3 real). El eje Y va igual en los dos.
+ *
+ * Lee el sensor a 200 Hz y, en cada cuadro, [drain] entrega el
+ * promedio de todo lo que llego desde el anterior: asi una sacudida conserva
+ * su impulso completo. Con solo la ultima lectura (cientos por segundo contra
+ * ~30 cuadros) casi siempre caia en un punto cualquiera de la sacudida y el
+ * agua temblaba en vez de chapotear. Tope de 3 g para que un golpe no la
+ * vuelva loca.
  */
-internal fun gravityListener(viewedFromBack: Boolean, onGravity: (x: Float, y: Float) -> Unit) = object : SensorEventListener {
+internal class GravitySampler(private val viewedFromBack: Boolean) : SensorEventListener {
+
+    private companion object {
+        const val MAX_ACCEL = 3f * 9.81f
+        // 200 Hz: el maximo sin el permiso HIGH_SAMPLING_RATE_SENSORS. Con
+        // SENSOR_DELAY_FASTEST (mas rapido) Android 12+ lanza SecurityException
+        const val SAMPLING_PERIOD_US = 5_000
+    }
+
+    private var sumX = 0f
+    private var sumY = 0f
+    private var count = 0
+    private var lastX = 0f
+    private var lastY = 9.81f
+
+    fun register(sensorManager: SensorManager) {
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.registerListener(this, accelerometer, SAMPLING_PERIOD_US)
+    }
+
+    @Synchronized
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-        val x = if (viewedFromBack) event.values[0] else -event.values[0]
-        onGravity(x, event.values[1])
+        var x = if (viewedFromBack) event.values[0] else -event.values[0]
+        var y = event.values[1]
+        val g = hypot(x, y)
+        if (g > MAX_ACCEL) { x *= MAX_ACCEL / g; y *= MAX_ACCEL / g }
+        sumX += x; sumY += y; count++
+        lastX = x; lastY = y
     }
+
+    /** Entrega el promedio desde la llamada anterior (o la ultima lectura si no llego nada). */
+    @Synchronized
+    fun drain(onGravity: (x: Float, y: Float) -> Unit) {
+        if (count == 0) {
+            onGravity(lastX, lastY)
+            return
+        }
+        onGravity(sumX / count, sumY / count)
+        sumX = 0f; sumY = 0f; count = 0
+    }
+
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }

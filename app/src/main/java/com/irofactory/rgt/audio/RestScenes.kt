@@ -79,12 +79,12 @@ internal class RestScenes {
     private var time = 0f
 
     /** [gx], [gy]: gravedad en m/s², ejes de la matriz (y hacia abajo); la usan las burbujas. */
-    fun step(dt: Float, pose: RestPose, gx: Float = 0f, gy: Float = 9.81f) {
+    fun step(dt: Float, pose: RestPose, gx: Float = 0f, gy: Float = 9.81f, shakeX: Float = 0f, shakeY: Float = 0f) {
         time += dt
         when (pose) {
             RestPose.JELLYFISH -> stepJelly(dt)
             RestPose.FISH -> stepFish(dt)
-            RestPose.BUBBLES -> stepBubbles(dt, gx, gy)
+            RestPose.BUBBLES -> stepBubbles(dt, gx, gy, shakeX, shakeY)
             else -> {}
         }
     }
@@ -371,7 +371,11 @@ internal class RestScenes {
 
     /** Burbuja: centro sin bamboleo ([bx], [by]); el bamboleo va de lado respecto a "arriba". */
     private class Bubble(var bx: Float, var by: Float, var r: Float, val speed: Float,
-                         var phase: Float, val amp: Float, val freq: Float, val big: Boolean)
+                         var phase: Float, val amp: Float, val freq: Float, val big: Boolean) {
+        // Velocidad que le dejan las sacudidas; el agua la frena
+        var vx = 0f
+        var vy = 0f
+    }
 
     private val bubbles = ArrayList<Bubble>()
     private val pops = ArrayList<FloatArray>()   // x, y, radio, edad
@@ -401,7 +405,8 @@ internal class RestScenes {
         bubblesReady = true
     }
 
-    private fun stepBubbles(dt: Float, gx: Float, gy: Float) {
+    /** [shakeX], [shakeY]: sacudida en m/s²; empuja a las burbujas en contra, mas a las chicas. */
+    private fun stepBubbles(dt: Float, gx: Float, gy: Float, shakeX: Float, shakeY: Float) {
         val g = hypot(gx, gy)
         if (g > 0.5f) {
             val follow = 1f - exp(-dt / 0.15f)
@@ -423,8 +428,12 @@ internal class RestScenes {
         while (iterator.hasNext()) {
             val b = iterator.next()
             b.phase += b.freq * dt
-            b.bx += upX * b.speed * dt
-            b.by += upY * b.speed * dt
+            val push = 1.2f / (0.6f + b.r)
+            val drag = exp(-dt / 0.5f)
+            b.vx = (b.vx - shakeX * push * dt) * drag
+            b.vy = (b.vy - shakeY * push * dt) * drag
+            b.bx += (upX * b.speed + b.vx) * dt
+            b.by += (upY * b.speed + b.vy) * dt
             b.r *= 1f + 0.015f * dt
             // Revienta al salir por el lado de arriba; las grandes vuelven a salir abajo.
             // Si el telefono gira, las que quedaron lejos y yendose se quitan sin reventar

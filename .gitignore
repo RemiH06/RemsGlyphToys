@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Glyph Matrix SDK: su licencia (§2.1(c)) prohíbe redistribuirlo; cada quien lo descarga
+app/libs/*.aar
+
+# Python
+__pycache__/

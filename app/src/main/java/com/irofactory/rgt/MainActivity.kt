@@ -1,5 +1,9 @@
 package com.irofactory.rgt
 
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +45,7 @@ import com.irofactory.rgt.audio.RestPose
 import com.irofactory.rgt.fluid.FluidMatrixView
 import com.irofactory.rgt.gallery.GalleryMatrixView
 import com.irofactory.rgt.glyphs.GlyphEditor
+import com.irofactory.rgt.ui.components.SherryButton
 import com.irofactory.rgt.ui.theme.RemsGlyphToysTheme
 import com.irofactory.rgt.ui.theme.crtScanlines
 import com.irofactory.rgt.ui.theme.sherryColors
@@ -117,6 +122,16 @@ fun HomeScreen(
     ) {
         Header()
 
+        // Sin guia, quien instala la app no sabe que debe agregar los toys al carrusel
+        val toysManager = remember { toysManagerIntent(context) }
+        if (toysManager != null) {
+            SherryButton(
+                text = stringResource(R.string.home_add_toys),
+                neon = sc.violet,
+                onClick = { openToysManager(context, toysManager) }
+            )
+        }
+
         ToySection(
             index = "01",
             name = "fluid",
@@ -144,6 +159,26 @@ fun HomeScreen(
             color = sc.text3,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+/**
+ * Pantalla "Manage Glyph Toys" del sistema, segun el README del GlyphMatrix
+ * Developer Kit (sistema 20250829 o posterior). Null si el telefono no la tiene.
+ */
+private fun toysManagerIntent(context: Context): Intent? {
+    val intent = Intent().setComponent(
+        ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity")
+    )
+    return intent.takeIf { context.packageManager.resolveActivity(it, 0) != null }
+}
+
+private fun openToysManager(context: Context, intent: Intent) {
+    try {
+        context.startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+    } catch (_: SecurityException) {
+        // Resuelve pero no esta exportada en esta version del sistema: no hay a donde ir
     }
 }
 

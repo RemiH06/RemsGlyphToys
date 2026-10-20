@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 
+    <!-- Visibilidad del administrador de Glyph Toys, para mostrar el boton solo si existe -->
+    <queries>
+        <package android:name="com.nothing.thirdparty"/>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

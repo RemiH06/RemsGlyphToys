@@ -5,6 +5,7 @@
     <string name="toy_summary_pulse">Tres figuras que respiran con el audio que se esté reproduciendo</string>
 
     <!-- Inicio -->
+    <string name="home_add_toys">> agregar toys al carrusel</string>
     <string name="home_fluid_description">Agua simulada con FLIP, como la fluid pendant de mitxela: cae hacia donde inclines el teléfono. Tócala para agitarla; en la matriz física, mantén presionado el botón Glyph. Una pulsación larga la reinicia.</string>
     <string name="home_gallery_description">Elige las fotos que quieres ver (se promedian a 25x25) o dibuja tus propios glifos con cinco intensidades. Todos entran a la misma rotación. Toca la matriz para cambiar; en la matriz física, haz una pulsación larga en el botón Glyph.</string>
     <string name="home_pulse_description">Tres figuras anidadas que respiran con lo que se esté reproduciendo, por bocina o audífonos: un hexágono para los graves, un diamante para las voces y un triángulo para los agudos. La que más suena queda afuera, las calladas se quedan quietas en el centro, y solo se cruzan cuando dos familias suenan igual de fuerte. Doble toque para reiniciarla.</string>

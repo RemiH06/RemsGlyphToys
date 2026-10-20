@@ -12,6 +12,7 @@
     <string name="toy_summary_pulse">Three shapes that breathe with whatever audio is playing</string>
 
     <!-- Inicio -->
+    <string name="home_add_toys">> add toys to the carousel</string>
     <string name="home_fluid_description">Water simulated with FLIP, like mitxela\'s fluid pendant: it falls toward wherever you tilt the phone. Tap to shake it; on the physical matrix, hold the Glyph button. A long press resets it.</string>
     <string name="home_gallery_description">Pick the photos you want to see (they\'re averaged down to 25x25) or draw your own glyphs with five brightness levels. They all share the same rotation. Tap the matrix to switch; on the physical matrix, long-press the Glyph button.</string>
     <string name="home_pulse_description">Three nested shapes that breathe with whatever is playing, through the speaker or headphones: a hexagon for bass, a diamond for vocals and a triangle for highs. The loudest ends up outside, quiet ones rest still at the center, and they only cross when two groups are equally loud. Double-tap to restart it.</string>

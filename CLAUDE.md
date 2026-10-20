@@ -31,8 +31,9 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - Decisiones S2 (2026-10-20): sección `#gestos` nueva tras Toys, con el aspecto de `doc-keys` portado en línea (grupos, chips `kbd`, filtro todo · matriz · app) pero sin escuchar teclas. Gestos tomados de los servicios y vistas: `EVENT_ACTION_DOWN` = mantener Glyph, `EVENT_CHANGE` = presión larga; pulse no usa el botón. Contraste: todo color usado como texto pasa AA en ambos modos (mínimo 4.6:1); `--rose` claro da 2.9:1 pero solo pinta destellos del lienzo, así que queda un comentario en vez de `--rose-ink`. El lema va en el footer de las dos páginas.
 
 ### S3 · App: botón al administrador de Glyph Toys
-- [ ] Botón en la app que abre el administrador de Glyph Toys del sistema para agregar los toys (recomendado en el README del GlyphMatrix Developer Kit; requiere sistema 20250829 o posterior). Tomar el intent exacto del README del kit; si no existe en la versión del teléfono, ocultar el botón.
-- [ ] Textos en `values/strings.xml` y `values-es/strings.xml`.
+- [x] Botón en la app que abre el administrador de Glyph Toys del sistema para agregar los toys (recomendado en el README del GlyphMatrix Developer Kit; requiere sistema 20250829 o posterior). Tomar el intent exacto del README del kit; si no existe en la versión del teléfono, ocultar el botón.
+- [x] Textos en `values/strings.xml` y `values-es/strings.xml`.
+- Decisiones S3 (2026-10-20): intent del README del kit, `ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity")`. Botón `> add toys to the carousel` / `> agregar toys al carrusel` bajo el encabezado del inicio, en violeta (ningún toy usa ese neón). Se oculta si `resolveActivity` no la encuentra; por eso el manifest declara `<queries>` con el paquete `com.nothing.thirdparty`. `startActivity` atrapa `ActivityNotFoundException` y `SecurityException`. Compila; **falta probarlo en el teléfono** (que aparezca el botón y abra el administrador).
 
 ### S4 · Release v1.0
 - Requiere la respuesta de S1 sobre el `NothingKey`.

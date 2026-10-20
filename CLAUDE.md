@@ -36,7 +36,7 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - Decisiones S3 (2026-10-20): intent del README del kit, `ComponentName("com.nothing.thirdparty", "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity")`. Botón `> add toys to the carousel` / `> agregar toys al carrusel` bajo el encabezado del inicio, en violeta (ningún toy usa ese neón). Se oculta si `resolveActivity` no la encuentra; por eso el manifest declara `<queries>` con el paquete `com.nothing.thirdparty`. `startActivity` atrapa `ActivityNotFoundException` y `SecurityException`. Compila; **falta probarlo en el teléfono** (que aparezca el botón y abra el administrador).
 
 ### S4 · Release v1.0
-- Requiere la respuesta de S1 sobre el `NothingKey`.
+- `NothingKey` resuelto sin esperar el correo (2026-10-20): el README oficial del Glyph Developer Kit dice que la restricción de API key se quitó desde Android B (Android 16) y que ya no hay que pedir key si la app apunta a esa versión; recomienda conservar el meta-data. La app tiene `targetSdk = 36` (Android 16), así que se queda `NothingKey = test`. Toys ya publicados como GlyphMarquee (v1.5.2) usan `test` también. Si GDK support contesta otra cosa, prevalece su respuesta.
 - [ ] Firma de release con keystore **fuera del repo** (rutas y contraseñas en `local.properties` o variables de entorno, nunca en git).
 - [ ] Revisar `versionCode`/`versionName` y si conviene minificar (probar que los toys sigan enlazando con R8).
 - [ ] Compilar el APK firmado y probarlo instalado limpio en el teléfono (sin la build de debug).

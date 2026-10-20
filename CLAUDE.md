@@ -23,11 +23,12 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - Pendiente para S6: el Roadmap del README todavía dice que el `.aar` está en el historial.
 
 ### S2 · Documentación con lo nuevo de sherry
-- [ ] Tabla de gestos por toy en `docs/index.html`, al estilo de `doc-keys` de sherry (inclinar, mantener el botón Glyph, presión larga, doble toque en la vista previa de pulse). Sacar los gestos reales del código, no del README.
-- [ ] `:focus-visible` con el acento en botones y links de `docs/index.html` y `docs/pulse.html`.
-- [ ] Revisar `--rose` y otros pasteles usados como texto en modo claro; si no pasan WCAG AA, usar las tintas `-ink` de sherry.
-- [ ] Opcional: lema "build anything" en el footer.
+- [x] Tabla de gestos por toy en `docs/index.html`, al estilo de `doc-keys` de sherry (inclinar, mantener el botón Glyph, presión larga, doble toque en la vista previa de pulse). Sacar los gestos reales del código, no del README.
+- [x] `:focus-visible` con el acento en botones y links de `docs/index.html` y `docs/pulse.html`.
+- [x] Revisar `--rose` y otros pasteles usados como texto en modo claro; si no pasan WCAG AA, usar las tintas `-ink` de sherry.
+- [x] Opcional: lema "build anything" en el footer.
 - Fuera de alcance a propósito: terminal, paleta de comandos, Tamauijetto, taller, BIOS, glitch, protector y sonido de sherry.
+- Decisiones S2 (2026-10-20): sección `#gestos` nueva tras Toys, con el aspecto de `doc-keys` portado en línea (grupos, chips `kbd`, filtro todo · matriz · app) pero sin escuchar teclas. Gestos tomados de los servicios y vistas: `EVENT_ACTION_DOWN` = mantener Glyph, `EVENT_CHANGE` = presión larga; pulse no usa el botón. Contraste: todo color usado como texto pasa AA en ambos modos (mínimo 4.6:1); `--rose` claro da 2.9:1 pero solo pinta destellos del lienzo, así que queda un comentario en vez de `--rose-ink`. El lema va en el footer de las dos páginas.
 
 ### S3 · App: botón al administrador de Glyph Toys
 - [ ] Botón en la app que abre el administrador de Glyph Toys del sistema para agregar los toys (recomendado en el README del GlyphMatrix Developer Kit; requiere sistema 20250829 o posterior). Tomar el intent exacto del README del kit; si no existe en la versión del teléfono, ocultar el botón.

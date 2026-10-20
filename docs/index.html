@@ -71,6 +71,8 @@ body.light {
   --text: #0a0a0a; --text2: #3A3A3A; --text3: #5F5F5F;
   --border: #CCCAB8; --border2: #B8B6A4;
   --magenta: #B2003F; --cyan: #006A6F; --lime: #2B6A10; --violet: #5A0FA8; --electric: #6C5E00;
+  /* --rose no llega a AA como texto en claro (2.9:1); solo pinta destellos del lienzo.
+     Si algun dia va en texto, usar la tinta de sherry: --rose-ink #A73264. */
   --rose: #CC5588; --aqua: #1E6877;
   --accent: #B2003F; --ok: #2B6A10; --warn: #6C5E00; --info: #006A6F;
   --glow-accent: none; --glow-cyan: none; --glow-lime: none; --glow-violet: none; --glow-electric: none;
@@ -95,6 +97,8 @@ body.light::before { z-index: 9998; background: repeating-linear-gradient(to bot
 ::-webkit-scrollbar-thumb { background: var(--border2); }
 a { color: var(--cyan); text-decoration: none; text-shadow: var(--glow-cyan); }
 a:hover { text-decoration: underline; }
+/* Foco visible con el acento del tema (sherry_theme) */
+a:focus-visible, button:focus-visible, iframe:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Lienzo de triangulos: fijo y global; los niveles opacos lo tapan */
 #tri-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: block; }
@@ -184,6 +188,28 @@ body.light .card h3, body.light .card:hover { text-shadow: none; box-shadow: non
 .card p { font-size: 12px; color: var(--text2); }
 .card dl { font-size: 11px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
 .card dt { color: var(--text3); }
+
+/* Gestos: aspecto de doc-keys de sherry (grupos, renglones, teclas), sin escuchar teclas */
+.keys-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+.keys-where { display: inline-flex; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+.keys-where button { font: inherit; font-size: 11px; padding: 4px 14px; min-height: 30px; background: transparent; color: var(--text2); border: 0; cursor: pointer; }
+.keys-where button + button { border-left: 1px solid var(--border2); }
+.keys-where button[aria-checked="true"] { background: var(--bg3); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+.keys-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 24px; }
+.keys-group h4 { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--tone); text-shadow: 0 0 8px color-mix(in srgb, var(--tone) 50%, transparent); }
+body.light .keys-group h4 { text-shadow: none; }
+.keys-group dl { margin: 0; }
+/* Chip arriba y texto abajo: en tres columnas el chip a la derecha apretaba la descripcion */
+.keys-row { display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.keys-row:hover { background: var(--bg3); }
+.keys-row[hidden] { display: none; }
+.keys-row dt { display: flex; flex-wrap: wrap; gap: 3px; }
+.keys-row dd { margin: 0; color: var(--text2); }
+.keys-row dd small { display: block; font-size: 10px; color: var(--text3); letter-spacing: .06em; text-transform: uppercase; }
+kbd {
+  font-family: var(--mono); font-size: 11px; line-height: 1.4; padding: 1px 6px; white-space: nowrap;
+  background: var(--bg3); border: 1px solid var(--border2); border-bottom-width: 2px; border-radius: var(--radius); color: var(--text);
+}
 
 /* Capturas */
 .shots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -280,6 +306,38 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   </div>
 </section>
 
+<section class="level solid" id="gestos">
+  <div class="wrap">
+    <h2>Gestos</h2>
+    <p class="muted">En la matriz, los toys responden al botón Glyph y al acelerómetro; en la app, a toques sobre la vista previa. Un toque corto al botón Glyph siempre pasa al siguiente toy del carrusel.</p>
+    <div class="keys-bar">
+      <div class="keys-where" role="radiogroup" aria-label="Dónde">
+        <button type="button" role="radio" aria-checked="true" data-where="">todo</button><button type="button" role="radio" aria-checked="false" data-where="matriz">matriz</button><button type="button" role="radio" aria-checked="false" data-where="app">app</button>
+      </div>
+    </div>
+    <div class="keys-groups">
+      <section class="keys-group" style="--tone: var(--cyan)"><h4>fluid</h4><dl>
+        <div class="keys-row" data-where="matriz app"><dt><kbd>inclinar</kbd></dt><dd>El agua cae hacia abajo<small>matriz · app</small></dd></div>
+        <div class="keys-row" data-where="matriz"><dt><kbd>mantener Glyph</kbd></dt><dd>Salpica y agita el agua<small>matriz</small></dd></div>
+        <div class="keys-row" data-where="matriz"><dt><kbd>presión larga Glyph</kbd></dt><dd>Reinicia el agua<small>matriz</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>toque</kbd></dt><dd>Salpica en la vista previa<small>app</small></dd></div>
+      </dl></section>
+      <section class="keys-group" style="--tone: var(--lime)"><h4>gallery</h4><dl>
+        <div class="keys-row" data-where="matriz"><dt><kbd>presión larga Glyph</kbd></dt><dd>Otra foto o glifo al azar, nunca el mismo dos veces seguidas<small>matriz</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>toque</kbd></dt><dd>Otra foto o glifo; sin contenido, abre el selector de fotos<small>app · vista previa</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>toque</kbd></dt><dd>Editar ese glifo<small>app · miniatura</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>arrastrar</kbd></dt><dd>Pintar LEDs con la intensidad del pincel<small>app · lienzo de glifos</small></dd></div>
+      </dl></section>
+      <section class="keys-group" style="--tone: var(--magenta)"><h4>pulse</h4><dl>
+        <div class="keys-row" data-where="matriz app"><dt><kbd>inclinar</kbd><kbd>sacudir</kbd></dt><dd>Mueve la plomada, el agua, las piezas y las burbujas<small>matriz · app · solo esos reposos</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>toque</kbd></dt><dd>Pide el permiso de audio, si falta<small>app · vista previa</small></dd></div>
+        <div class="keys-row" data-where="app"><dt><kbd>doble toque</kbd></dt><dd>Reinicia las figuras y reabre el audio<small>app · vista previa</small></dd></div>
+      </dl></section>
+    </div>
+    <p class="muted" style="margin-top:12px">Pulse no usa el botón Glyph: todo lo mueve el audio.</p>
+  </div>
+</section>
+
 <section class="level solid" id="capturas">
   <div class="wrap">
     <h2>Capturas</h2>
@@ -341,7 +399,7 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
 </section>
 
 <footer class="level">
-  <div class="wrap"><p class="prompt">rem's glyph toys · Hex (@RemiH06) · iroFactory.sherry · AGPL-3.0 · Fondo Dither de <a href="https://github.com/DavidHDev/react-bits">React Bits</a> por David Haz (<a href="https://github.com/DavidHDev">@DavidHDev</a>)</p></div>
+  <div class="wrap"><p class="prompt">rem's glyph toys · build anything · Hex (@RemiH06) · iroFactory.sherry · AGPL-3.0 · Fondo Dither de <a href="https://github.com/DavidHDev/react-bits">React Bits</a> por David Haz (<a href="https://github.com/DavidHDev">@DavidHDev</a>)</p></div>
 </footer>
 
 </div><!-- .page -->
@@ -375,6 +433,14 @@ function hexToVec3(hex) {
   applyCrt(load('rgt-crt') !== 'off');
   themeBtn.addEventListener('click', () => { const l = !body.classList.contains('light'); applyTheme(l); save('rgt-theme', l ? 'light' : 'dark'); });
   crtBtn.addEventListener('click', () => { const on = !body.classList.contains('crt-on'); applyCrt(on); save('rgt-crt', on ? 'on' : 'off'); });
+
+  // Gestos: filtrar por donde se hacen (matriz o app); un grupo sin renglones se oculta.
+  const whereBtns = document.querySelectorAll('.keys-where button');
+  whereBtns.forEach(b => b.addEventListener('click', () => {
+    whereBtns.forEach(x => x.setAttribute('aria-checked', String(x === b)));
+    document.querySelectorAll('.keys-row').forEach(r => { r.hidden = !!b.dataset.where && !r.dataset.where.split(' ').includes(b.dataset.where); });
+    document.querySelectorAll('.keys-group').forEach(g => { g.hidden = !g.querySelector('.keys-row:not([hidden])'); });
+  }));
 
   // Capturas: si la imagen aun no existe, se muestra el hueco reservado.
   document.querySelectorAll('.shot img').forEach(img => {

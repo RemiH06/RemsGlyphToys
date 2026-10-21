@@ -62,4 +62,5 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 ### S6 · Envío
 - [ ] Texto para el formulario de Playground (inglés): descripción corta, los tres toys, requisito Phone (3), aviso de que pulse pide el micrófono solo porque `Visualizer` lo exige y no graba nada.
 - [ ] Post para nothing.community con repo, release y los dos escaneos.
-- [ ] Actualizar el Roadmap del README (quitar lo publicado).
+- [x] Actualizar el Roadmap del README (quitar lo publicado).
+- Decisiones S6 (2026-10-21): del Roadmap se quitó toda la lista de publicación (incluida la línea del `.aar` y la de "placeholders"); queda una línea para foto o video real de la matriz. Textos del formulario y del post entregados en el chat; los envía la persona usuaria. Antes de enviar hay que hacer push: moderación revisa el repo remoto.

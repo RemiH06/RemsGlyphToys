@@ -101,12 +101,7 @@ ariadne generate
 
 ## Roadmap
 
-- **Publish fluid, gallery and pulse on [Nothing Playground](https://playground.nothing.tech/)** (sign in, *Upload your Glyph Toys*, public repo URL, description and a capture; moderators review it). Before submitting:
-  - Stop tracking `app/libs/glyph-matrix-sdk-2.0.aar`: the [Glyph SDK license](https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit/blob/main/LICENSE.md) forbids redistributing it (section 2.1(c)), and it is in this public repo's history
-  - Ask GDKsupport@nothing.tech whether a published toy needs a real `NothingKey` instead of `test`
-  - Signed release APK on GitHub Releases
-  - Real captures and short videos for `docs/screenshots/` (placeholders today)
-  - Explain in the listing that pulse asks for the microphone only because Android's `Visualizer` requires it; nothing is recorded
+- **Photos and video of the physical matrix**: the toy captures in `docs/screenshots/` are the in-app previews (same engines), since the LEDs can't be screenshotted.
 - **Glyph Matrix aware of Android modes**: a toy (for example a digital clock) that changes with the active mode, especially calendar-event modes. Apps can only see the Do Not Disturb level, not which mode is on, and cannot choose the active toy; mirroring each mode's calendar rule inside the app would work but duplicates the configuration. Idea to propose to Nothing: expose the active mode to Glyph Toys, or let each mode pick a toy.
 - **Home screen widgets**: being explored, including whether fluid can run live in a widget.
 

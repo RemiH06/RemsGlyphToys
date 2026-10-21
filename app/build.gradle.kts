@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+// Firma de release: rutas y contraseñas viven en local.properties o en variables de entorno, nunca en git
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun signingProp(key: String): String? =
+    localProps.getProperty("rgt.$key") ?: System.getenv("RGT_${key.uppercase()}")
+val releaseStoreFile = signingProp("storeFile")
 
 android {
     namespace = "com.irofactory.rgt"
@@ -21,11 +31,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = signingProp("storePassword")
+                keyAlias = signingProp("keyAlias")
+                keyPassword = signingProp("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
-                enable = false
+                enable = true
             }
+            // Sin keystore configurado, el APK de release sale sin firmar
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

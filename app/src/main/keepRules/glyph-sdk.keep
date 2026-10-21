@@ -1,0 +1,2 @@
+# El .aar del Glyph Matrix SDK no trae reglas propias; se conserva completo porque habla por Binder con el servicio del sistema
+-keep class com.nothing.** { *; }

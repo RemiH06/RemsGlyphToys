@@ -46,8 +46,10 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - [ ] README: ruta "descargar e instalar el APK" antes de la de compilar; ajustar el bloque `diff` (key, sideload).
 
 ### S5 · Capturas
-- [ ] La persona usuaria toma capturas y videos cortos; guardarlos como `docs/screenshots/rgt_ss1.png` … `rgt_ss6.png` (ya referenciados en README y `docs/index.html`).
-- [ ] Optimizar peso, revisar los `alt` y quitar los placeholders de "captura pendiente" si ya no aplican.
+- [x] La persona usuaria toma capturas y videos cortos; guardarlos como `docs/screenshots/rgt_ss1.png` … `rgt_ss6.png` (ya referenciados en README y `docs/index.html`).
+- [x] Optimizar peso, revisar los `alt` y quitar los placeholders de "captura pendiente" si ya no aplican.
+- Decisiones S5 (2026-10-21): capturas tomadas por adb (`screencap`) con la app en inglés (`cmd locale set-app-locales`) y la barra de estado en modo demo; ambos restaurados después. No hay forma de fotografiar los LEDs, así que fluid, gallery y pulse son las vistas previas de la app (misma simulación que el toy) recortadas a 9:16 a lo ancho completo; inicio, editor y personalizar son pantalla completa. Todas a 720 px de ancho, 160 a 290 KB. Captions y `alt` dicen "vista previa", no "matriz física". Se quitaron los huecos de "captura pendiente" (HTML, CSS y JS) y el `.gitkeep`. Gallery muestra el glifo dibujado, no la foto personal (que solo asoma abajo en `rgt_ss1`). Pulse se capturó con Spotify sonando. La app se reinstaló con la build de debug y el botón del administrador aparece (S3 sigue pendiente de confirmar que lo abre).
+- Pendiente: sin video. Si algún día hay foto o video real de la matriz, sustituir `rgt_ss2/3/5`. El Roadmap del README sigue diciendo "placeholders today" (se limpia en S6).
 
 ### S6 · Envío
 - [ ] Texto para el formulario de Playground (inglés): descripción corta, los tres toys, requisito Phone (3), aviso de que pulse pide el micrófono solo porque `Visualizer` lo exige y no graba nada.

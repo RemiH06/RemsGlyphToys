@@ -216,14 +216,6 @@ kbd {
 @media (max-width: 760px) { .shots { grid-template-columns: 1fr 1fr; } }
 .shot { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
 .shot img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; background: var(--bg3); }
-.shot .slot {
-  display: none; aspect-ratio: 9 / 16; place-content: center; text-align: center; gap: 6px;
-  color: var(--text2); font-size: 10px; padding: 12px; overflow-wrap: anywhere;
-  background: repeating-linear-gradient(135deg, transparent 0 10px, var(--bg3) 10px 11px);
-}
-.shot.missing img { display: none; }
-.shot.missing .slot { display: grid; }
-.shot .slot b { font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--text); }
 .shot figcaption { padding: 8px 10px; font-size: 11px; color: var(--text2); border-top: 1px solid var(--border2); }
 
 /* Pipeline */
@@ -342,12 +334,12 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
   <div class="wrap">
     <h2>Capturas</h2>
     <div class="shots">
-      <figure class="shot"><img src="screenshots/rgt_ss1.png" alt="App con las tres vistas previas" loading="lazy"><div class="slot"><b>01</b>captura pendiente<br>screenshots/rgt_ss1.png</div><figcaption>App · inicio</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss2.png" alt="Toy fluid en la Glyph Matrix" loading="lazy"><div class="slot"><b>02</b>captura pendiente<br>screenshots/rgt_ss2.png</div><figcaption>fluid · matriz física</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss3.png" alt="Toy gallery en la Glyph Matrix" loading="lazy"><div class="slot"><b>03</b>captura pendiente<br>screenshots/rgt_ss3.png</div><figcaption>gallery · matriz física</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss4.png" alt="Dibujando un glifo sobre los LEDs reales" loading="lazy"><div class="slot"><b>04</b>captura pendiente<br>screenshots/rgt_ss4.png</div><figcaption>mis glifos · lienzo</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss5.png" alt="Toy pulse en la Glyph Matrix" loading="lazy"><div class="slot"><b>05</b>captura pendiente<br>screenshots/rgt_ss5.png</div><figcaption>pulse · matriz física</figcaption></figure>
-      <figure class="shot"><img src="screenshots/rgt_ss6.png" alt="Pantalla para elegir el reposo y las figuras de pulse" loading="lazy"><div class="slot"><b>06</b>captura pendiente<br>screenshots/rgt_ss6.png</div><figcaption>pulse · personalizar</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss1.png" alt="Inicio de la app con el botón para agregar los toys y la vista previa de fluid" loading="lazy"><figcaption>App · inicio</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss2.png" alt="Vista previa de fluid en la app: el agua salpica después de un toque" loading="lazy"><figcaption>fluid · vista previa</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss3.png" alt="Vista previa de gallery en la app mostrando un glifo dibujado" loading="lazy"><figcaption>gallery · vista previa</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss4.png" alt="Editor de glifos con el lienzo de 25x25 y los cinco niveles de brillo" loading="lazy"><figcaption>mis glifos · lienzo</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss5.png" alt="Vista previa de pulse en la app: tres figuras anidadas siguiendo una canción" loading="lazy"><figcaption>pulse · vista previa</figcaption></figure>
+      <figure class="shot"><img src="screenshots/rgt_ss6.png" alt="Pantalla para elegir el reposo y las figuras de pulse" loading="lazy"><figcaption>pulse · personalizar</figcaption></figure>
     </div>
   </div>
 </section>
@@ -441,13 +433,6 @@ function hexToVec3(hex) {
     document.querySelectorAll('.keys-row').forEach(r => { r.hidden = !!b.dataset.where && !r.dataset.where.split(' ').includes(b.dataset.where); });
     document.querySelectorAll('.keys-group').forEach(g => { g.hidden = !g.querySelector('.keys-row:not([hidden])'); });
   }));
-
-  // Capturas: si la imagen aun no existe, se muestra el hueco reservado.
-  document.querySelectorAll('.shot img').forEach(img => {
-    const miss = () => img.closest('.shot').classList.add('missing');
-    if (img.complete && img.naturalWidth === 0) miss();
-    img.addEventListener('error', miss);
-  });
 })();
 
 // ── Dither (port de sherry_theme: Perlin ridged + domain warp + Bayer 8x8) ──

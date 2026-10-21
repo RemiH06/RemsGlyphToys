@@ -30,7 +30,7 @@ Three toys ship today: **fluid**, water simulated with FLIP like [mitxela's flui
 
 | App | fluid | gallery | my glyphs | pulse | pulse settings |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/rgt_ss1.png" width="150" alt="App home with the three toy previews"/> | <img src="docs/screenshots/rgt_ss2.png" width="150" alt="fluid on the Glyph Matrix"/> | <img src="docs/screenshots/rgt_ss3.png" width="150" alt="gallery on the Glyph Matrix"/> | <img src="docs/screenshots/rgt_ss4.png" width="150" alt="drawing a glyph on the real LED layout"/> | <img src="docs/screenshots/rgt_ss5.png" width="150" alt="pulse on the Glyph Matrix"/> | <img src="docs/screenshots/rgt_ss6.png" width="150" alt="picking a rest pose and shapes for pulse"/> |
+| <img src="docs/screenshots/rgt_ss1.png" width="150" alt="App home with the button that adds the toys and the fluid preview"/> | <img src="docs/screenshots/rgt_ss2.png" width="150" alt="fluid preview in the app, splashing after a tap"/> | <img src="docs/screenshots/rgt_ss3.png" width="150" alt="gallery preview in the app showing a hand-drawn glyph"/> | <img src="docs/screenshots/rgt_ss4.png" width="150" alt="glyph editor on the real LED layout with five brightness levels"/> | <img src="docs/screenshots/rgt_ss5.png" width="150" alt="pulse preview in the app, three nested shapes following a song"/> | <img src="docs/screenshots/rgt_ss6.png" width="150" alt="picking a rest pose and shapes for pulse"/> |
 
 ```diff
 - Requires a Nothing Phone (3) (DEVICE_23112) running Nothing OS 4.0 / Android 16

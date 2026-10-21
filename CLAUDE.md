@@ -40,11 +40,12 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - [ ] Firma de release con keystore **fuera del repo** (rutas y contraseñas en `local.properties` o variables de entorno, nunca en git).
 - [ ] Revisar `versionCode`/`versionName` y si conviene minificar (probar que los toys sigan enlazando con R8).
 - [ ] Compilar el APK firmado y probarlo instalado limpio en el teléfono (sin la build de debug).
-- [ ] Changelog v1.0 en `docs/` al estilo de `doc-changelog`; su texto sirve de notas de la release.
+- [x] Changelog v1.0 en `docs/` al estilo de `doc-changelog`; su texto sirve de notas de la release.
 - [ ] GitHub Release v1.0 con el APK. La persona usuaria lo publica.
 - [ ] Links de escaneo de VirusTotal y Koodous del APK (las reglas de nothing.community los piden al compartir un APK).
-- [ ] README: ruta "descargar e instalar el APK" antes de la de compilar; ajustar el bloque `diff` (key, sideload).
+- [x] README: ruta "descargar e instalar el APK" antes de la de compilar; ajustar el bloque `diff` (key, sideload).
 - Avance S4 (2026-10-21): `app/build.gradle.kts` lee `rgt.storeFile`, `rgt.storePassword`, `rgt.keyAlias` y `rgt.keyPassword` de `local.properties` (o `RGT_STORE_FILE`, etc. del entorno); sin ellas el release sale sin firmar. `versionCode = 1`, `versionName = "1.0"` se quedan. R8 activado (`optimization.enable = true`); el SDK no trae reglas, así que `app/src/main/keepRules/glyph-sdk.keep` conserva `com.nothing.**` (AGP 9 exige extensión `.keep` en esa carpeta). El release pasa de 30 MB (debug) a 2.1 MB; el mapping confirma que los tres servicios y `MainActivity` conservan su nombre. **Falta**: que la persona usuaria cree el keystore, compilar firmado y probar en el teléfono que los tres toys enlacen con R8.
+- Changelog y README (2026-10-21): sección `#cambios` al final de `docs/index.html` con el aspecto de `doc-changelog` portado en línea, estático (sin filtro, rango ni copiar mientras haya una sola versión); fecha 2026-10-21, ajustarla si la release sale otro día. README y `#instalacion` ofrecen primero el APK de `releases/latest`, con el asset llamado **`rems-glyph-toys-v1.0.apk`** (subirlo con ese nombre). Del bloque `diff` se quitó la línea de la key.
 
 ### S5 · Capturas
 - [x] La persona usuaria toma capturas y videos cortos; guardarlos como `docs/screenshots/rgt_ss1.png` … `rgt_ss6.png` (ya referenciados en README y `docs/index.html`).

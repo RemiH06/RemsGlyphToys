@@ -244,6 +244,21 @@ td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: 
 tr:hover td { background: var(--bg3); }
 .table-scroll { overflow-x: auto; }
 
+/* Cambios: aspecto de doc-changelog de sherry (línea de versiones, tipo de salto, etiquetas por tipo), sin filtro ni rango mientras haya una sola versión */
+.cl-list { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 1px solid var(--border2); }
+.cl-rel { position: relative; padding: 0 0 18px 4px; }
+.cl-rel::before { content: ''; position: absolute; left: -23px; top: 8px; width: 9px; height: 9px; border-radius: var(--radius); background: var(--bg2); border: 2px solid var(--accent); }
+.cl-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-bottom: 6px; }
+.cl-v { font-weight: 700; font-size: 17px; color: var(--text); }
+.cl-head time { color: var(--text2); font-size: 12px; }
+.cl-bump { font-size: 11px; padding: 1px 8px; border: 1px solid var(--border2); border-radius: 99px; color: var(--text2); }
+.cl-rel ul { list-style: none; margin: 0; padding: 0; }
+.cl-rel li { display: flex; align-items: baseline; gap: 10px; padding: 2px 0; font-size: 12px; }
+.cl-tag { flex-shrink: 0; min-width: 7em; font-size: 11px; color: var(--text2); }
+.cl-tag::before { content: '■ '; }
+.cl-tag.is-added { color: var(--lime); }
+@media (max-width: 640px) { .cl-rel li { flex-direction: column; gap: 0; } }
+
 footer.level { padding: 28px 0 48px; }
 footer p { font-size: 11px; color: var(--text2); margin: 0; }
 
@@ -382,11 +397,33 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
 <section class="level" id="instalacion">
   <div class="wrap">
     <h2>Instalación</h2>
+    <h3>Descargar el APK</h3>
+    <div class="panel"><p>Baja <code>rems-glyph-toys-v1.0.apk</code> de la <a href="https://github.com/RemiH06/RemsGlyphToys/releases/latest" target="_blank" rel="noopener">última release</a> e instálalo en el Nothing Phone (3); Android pedirá permitir apps de fuentes desconocidas. Después: abrir la app, tocar <b>agregar toys al carrusel</b>, elegir fotos para gallery y dar el permiso de audio a pulse.</p></div>
+    <h3>Compilar</h3>
     <pre data-lang="bash"><code><span class="prompt">git clone https://github.com/RemiH06/RemsGlyphToys.git</span>
 <span class="prompt">cd RemsGlyphToys</span>
 <span class="prompt">./gradlew :app:installDebug</span></code></pre>
-    <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>. Después: abrir la app, elegir fotos para gallery, dar el permiso de audio a pulse y activar los toys en el carrusel del botón Glyph.</p></div>
+    <div class="panel"><p class="muted">Requiere el SDK de la Glyph Matrix en <code>app/libs/glyph-matrix-sdk-2.0.aar</code>, que se baja del <a href="https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit" target="_blank" rel="noopener">GlyphMatrix Developer Kit</a> porque su licencia no permite redistribuirlo.</p></div>
     <div class="callout"><div class="callout-title">más tiempo encendido</div><p>Por default los toys se apagan a los 30 s, con cualquier toy. En los ajustes de Glyph Toys, "Duración del timeout" llega a 30 minutos; por encima de eso, con <code>adb shell settings put system glyph_toy_timeout &lt;ms&gt;</code>. El sistema también los apaga al desbloquear o al voltear el teléfono boca abajo. Los tres declaran soporte de AOD para usarlos como toy Always-On.</p></div>
+  </div>
+</section>
+
+<section class="level solid" id="cambios">
+  <div class="wrap">
+    <h2>Cambios</h2>
+    <ol class="cl-list">
+      <li class="cl-rel">
+        <div class="cl-head"><span class="cl-v">1.0</span><span class="cl-bump">primera</span><time datetime="2026-10-21">21 oct 2026</time></div>
+        <ul>
+          <li><span class="cl-tag is-added">Añadido</span>fluid: agua FLIP en un tazón del tamaño de la matriz que sigue al acelerómetro; mantener el botón Glyph la agita y la presión larga la reinicia.</li>
+          <li><span class="cl-tag is-added">Añadido</span>gallery: fotos del Photo Picker, sin permisos de almacenamiento, ajustadas para LEDs y promediadas a la matriz; la presión larga pasa a otra.</li>
+          <li><span class="cl-tag is-added">Añadido</span>Mis glifos: lienzo sobre los 489 LEDs reales con cinco intensidades; los glifos entran a la rotación de gallery.</li>
+          <li><span class="cl-tag is-added">Añadido</span>pulse: seis bandas de la mezcla de salida agrupadas en tres figuras que respiran, anillo de bombo, figura alternativa por familia y reposos elegibles (ojo, gato, logo, reloj, agua, piezas, medusa, pez, burbujas y más).</li>
+          <li><span class="cl-tag is-added">Añadido</span>Vistas previas en la app con los mismos motores que los toys, y un botón que abre el administrador de Glyph Toys del sistema para agregarlos al carrusel.</li>
+          <li><span class="cl-tag is-added">Añadido</span>Soporte de Always-On en los tres toys, y la app en inglés y español.</li>
+        </ul>
+      </li>
+    </ol>
   </div>
 </section>
 

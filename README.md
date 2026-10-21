@@ -34,11 +34,18 @@ Three toys ship today: **fluid**, water simulated with FLIP like [mitxela's flui
 
 ```diff
 - Requires a Nothing Phone (3) (DEVICE_23112) running Nothing OS 4.0 / Android 16
-- Uses the development NothingKey "test"; distribution requires a key from Nothing
-- Not available on the Play Store, sideload only
+- Not available on the Play Store: sideload the APK from GitHub Releases
 ```
 
 ## Installation
+
+### Download the APK
+
+1. Download `rems-glyph-toys-v1.0.apk` from the [latest release](https://github.com/RemiH06/RemsGlyphToys/releases/latest) on the phone and open it; Android will ask you to allow installs from that source.
+
+2. Continue from step 4 of *Build from source* to set up and enable the toys.
+
+### Build from source
 
 1. Clone the repository:
    ```bash
@@ -60,7 +67,7 @@ Three toys ship today: **fluid**, water simulated with FLIP like [mitxela's flui
    - **gallery**: tap **pick photos** to choose what to show (system Photo Picker, no storage permission), or **draw** to create your own glyphs; both share the same rotation
    - **pulse**: tap the preview to grant the microphone permission, required by Android's `Visualizer` to read the output mix; nothing is recorded. Tap **customize** to pick the idle pose and the shape of each band, in a dedicated screen
 
-5. Open the Glyph Toy settings (long-press the Glyph Button, or **Settings → Glyph Interface → Glyph Toys**), enable **Fluid**, **Gallery** and **Pulse**, and cycle to them with a short press.
+5. Tap **add toys to the carousel** in the app (or open the Glyph Toy settings: long-press the Glyph Button, or **Settings → Glyph Interface → Glyph Toys**), enable **Fluid**, **Gallery** and **Pulse**, and cycle to them with a short press.
 
 6. Optional: toys go dark after 30 s by default. Raise **Timeout duration** in the Glyph Toys settings (up to 30 minutes), or go beyond with adb; the SDK's `setGlyphMatrixTimeout` only works for Nothing's own apps:
    ```bash

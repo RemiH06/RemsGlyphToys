@@ -7,7 +7,8 @@ plugins {
 
 // Firma de release: rutas y contraseñas viven en local.properties o en variables de entorno, nunca en git
 val localProps = Properties().apply {
-    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    // UTF-8 explícito: Properties.load(InputStream) lee ISO-8859-1 y descompone contraseñas con ñ o acentos
+    rootProject.file("local.properties").takeIf { it.exists() }?.reader(Charsets.UTF_8)?.use { load(it) }
 }
 fun signingProp(key: String): String? =
     localProps.getProperty("rgt.$key") ?: System.getenv("RGT_${key.uppercase()}")

@@ -41,12 +41,16 @@ Una sesión por bloque, en orden. Al terminar una, marcar sus casillas aquí y a
 - [x] Revisar `versionCode`/`versionName` y si conviene minificar (probar que los toys sigan enlazando con R8).
 - [x] Compilar el APK firmado y probarlo instalado limpio en el teléfono (sin la build de debug).
 - [x] Changelog v1.0 en `docs/` al estilo de `doc-changelog`; su texto sirve de notas de la release.
-- [ ] GitHub Release v1.0 con el APK. La persona usuaria lo publica.
-- [ ] Links de escaneo de VirusTotal y Koodous del APK (las reglas de nothing.community los piden al compartir un APK).
+- [x] GitHub Release v1.0 con el APK. La persona usuaria lo publica.
+- [x] Links de escaneo de VirusTotal y Koodous del APK (las reglas de nothing.community los piden al compartir un APK).
 - [x] README: ruta "descargar e instalar el APK" antes de la de compilar; ajustar el bloque `diff` (key, sideload).
 - Avance S4 (2026-10-21): `app/build.gradle.kts` lee `rgt.storeFile`, `rgt.storePassword`, `rgt.keyAlias` y `rgt.keyPassword` de `local.properties` (o `RGT_STORE_FILE`, etc. del entorno); sin ellas el release sale sin firmar. `versionCode = 1`, `versionName = "1.0"` se quedan. R8 activado (`optimization.enable = true`); el SDK no trae reglas, así que `app/src/main/keepRules/glyph-sdk.keep` conserva `com.nothing.**` (AGP 9 exige extensión `.keep` en esa carpeta). El release pasa de 30 MB (debug) a 2.1 MB; el mapping confirma que los tres servicios y `MainActivity` conservan su nombre. **Falta**: que la persona usuaria cree el keystore, compilar firmado y probar en el teléfono que los tres toys enlacen con R8.
 - Changelog y README (2026-10-21): sección `#cambios` al final de `docs/index.html` con el aspecto de `doc-changelog` portado en línea, estático (sin filtro, rango ni copiar mientras haya una sola versión); fecha 2026-10-21, ajustarla si la release sale otro día. README y `#instalacion` ofrecen primero el APK de `releases/latest`, con el asset llamado **`rems-glyph-toys-v1.0.apk`** (subirlo con ese nombre). Del bloque `diff` se quitó la línea de la key.
 - Prueba (2026-10-21): keystore en `%USERPROFILE%\.android\keystores\rgt-release.jks`, alias `rgt`, certificado `CN=Remi Lambda, O=iroFactory`. Su contraseña debe ser ASCII: keytool en la consola de Windows guarda mal la ñ y los acentos (`build.gradle.kts` ya lee `local.properties` en UTF-8, pero eso no basta). Release instalado limpio en el teléfono: los tres toys funcionan con R8 y el botón del administrador de S3 abre bien.
+- Release v1.0 publicada (2026-10-21) con `rems-glyph-toys-v1.0.apk`, SHA-256 `c46ccec997a8bee873968fc9ad740b6f7c3423d43d61b31fecb95dfb59888d4e`. Escaneos para el post de S6:
+  - VirusTotal: https://www.virustotal.com/gui/file/c46ccec997a8bee873968fc9ad740b6f7c3423d43d61b31fecb95dfb59888d4e
+  - Koodous: https://koodous.com/apks/c46ccec997a8bee873968fc9ad740b6f7c3423d43d61b31fecb95dfb59888d4e/general-information
+- Si una versión futura cambia el APK, hay que recompilarlo, volver a escanearlo y actualizar estos links (el hash cambia).
 
 ### S5 · Capturas
 - [x] La persona usuaria toma capturas y videos cortos; guardarlos como `docs/screenshots/rgt_ss1.png` … `rgt_ss6.png` (ya referenciados en README y `docs/index.html`).

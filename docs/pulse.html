@@ -151,6 +151,43 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px;
 input[type=range]::-moz-range-thumb { width: 10px; height: 14px; background: var(--magenta); border: none; border-radius: 1px; }
 .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 
+/* Carrusel de reposos · idea de Dome Gallery (React Bits, vía metro_theme)
+   llevada a un anillo: arrastrar gira, al soltar se asienta en un mosaico,
+   clic en el del frente lo abre en grande. Código propio, no un port. */
+.rest-ring {
+  --tile: clamp(108px, 21vw, 168px); --r: calc(var(--tile) * 1.95);
+  position: relative; height: max(calc(var(--tile) * 1.3 + 40px), 300px); margin: 22px 0 6px;
+  overflow: hidden; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab;
+}
+.rest-ring.is-dragging { cursor: grabbing; }
+.rr-stage {
+  position: absolute; inset: 0; display: grid; place-items: center; perspective: calc(var(--r) * 3.2);
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--text) 18%, var(--text) 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, var(--text) 18%, var(--text) 82%, transparent);
+}
+.rr-spin { position: relative; width: var(--tile); height: calc(var(--tile) + 26px); transform-style: preserve-3d; will-change: transform; }
+.rr-item { position: absolute; inset: 0; transform: rotateY(calc(var(--i) * 30deg)) translateZ(var(--r)); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.rr-tile {
+  display: block; width: 100%; aspect-ratio: 1; padding: 0; overflow: hidden; cursor: pointer;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 50%; transition: border-color .2s, box-shadow .2s;
+}
+.rr-tile img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.rr-item.is-front .rr-tile { border-color: var(--accent); box-shadow: var(--glow-accent); }
+.rr-name { display: block; margin-top: 6px; text-align: center; font-size: 11px; color: var(--text2); letter-spacing: .05em; }
+.rr-item.is-front .rr-name { color: var(--accent); }
+.rr-scrim { position: absolute; inset: 0; z-index: 4; background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .3s; }
+.rest-ring.is-open .rr-scrim { opacity: 1; pointer-events: auto; cursor: zoom-out; }
+.rr-enlarge {
+  position: absolute; z-index: 5; left: 0; top: 0; margin: 0; transform-origin: 0 0; cursor: zoom-out;
+  transition: transform .3s ease, opacity .3s ease;
+}
+.rr-enlarge img { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--accent); box-shadow: var(--glow-accent); }
+.rr-enlarge figcaption { position: absolute; left: 50%; top: 100%; width: max-content; max-width: 80vw; transform: translateX(-50%); margin-top: 8px; text-align: center; font-size: 11px; color: var(--text2); }
+.rr-enlarge figcaption b { color: var(--accent); font-weight: 700; }
+.rr-enlarge:focus { outline: none; }
+.rr-enlarge:focus-visible img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rr-hint { font-size: 11px; color: var(--text2); text-align: center; margin: 0 0 18px; }
+
 footer { padding: 28px 0 48px; border-top: 1px solid var(--border2); }
 footer p { font-size: 11px; color: var(--text2); margin: 0; }
 .prompt::before { content: '$ '; color: var(--electric); text-shadow: var(--glow-electric); }
@@ -413,6 +450,11 @@ footer p { font-size: 11px; color: var(--text2); margin: 0; }
       </tbody>
     </table></div>
     <p>El reposo es lo que se ve sin audio o con el volumen muy bajo; la transición sigue al volumen real igual que las demás animaciones de pulse (subida rápida, bajada lenta).</p>
+    <div class="rest-ring" id="rest-ring" role="region" aria-roledescription="carrusel" aria-label="Los doce reposos de pulse">
+      <div class="rr-stage"><div class="rr-spin"></div></div>
+      <div class="rr-scrim"></div>
+    </div>
+    <p class="rr-hint">Arrastra o usa las flechas para girar; clic en el del frente para verlo en grande. Grabados de la vista previa de la app (la misma simulación que el toy), con la almendra en voces; cada clip va y viene en bucle.</p>
     <div class="table-scroll"><table>
       <thead><tr><th>Reposo</th><th>Qué se ve en silencio</th></tr></thead>
       <tbody>
@@ -676,6 +718,145 @@ function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(
   } else {
     requestAnimationFrame(frame);
   }
+})();
+
+// ── Carrusel de reposos: anillo de 12 que se asienta en un mosaico ──
+(() => {
+  const ring = document.getElementById('rest-ring');
+  if (!ring) return;
+  const RESTS = [
+    ['center', 'centro', 'las figuras se juntan al centro'],
+    ['cat', 'gato', 'iris del tamaño de la matriz y una pupila que mira de lado a lado'],
+    ['logo', 'logo', 'las tres figuras anidadas como el logo, girando lento'],
+    ['boom', 'boom', 'el anillo del bombo quieto en su máximo'],
+    ['plumb', 'plomada', 'el triángulo apunta siempre al suelo'],
+    ['melt', 'derretir', 'las figuras se vuelven agua que cae'],
+    ['pieces', 'piezas', 'polígonos sólidos que caen y chocan'],
+    ['vanish', 'oscuridad', 'todo se apaga'],
+    ['clock', 'reloj', 'los contornos trazan la hora'],
+    ['jellyfish', 'medusa', 'una medusa que nada a pulsos'],
+    ['fish', 'pez', 'un pez visto de lado que da vueltas'],
+    ['bubbles', 'burbujas', 'burbujas que suben y revientan arriba'],
+  ];
+  const N = RESTS.length, STEP = 360 / N, AUTO_MS = 3200;
+  const spin = ring.querySelector('.rr-spin'), scrim = ring.querySelector('.rr-scrim');
+  spin.innerHTML = RESTS.map(([file, name], i) =>
+    `<div class="rr-item" style="--i:${i}" role="group" aria-roledescription="diapositiva" aria-label="${i + 1} de ${N}: ${name}">` +
+    `<button type="button" class="rr-tile" data-i="${i}" aria-label="Ver en grande el reposo ${name}">` +
+    `<img src="screenshots/rest/${file}.webp" alt="" width="240" height="240" loading="lazy" decoding="async" draggable="false"></button>` +
+    `<span class="rr-name">${name}</span></div>`).join('');
+  const items = [...spin.children], tiles = items.map(it => it.querySelector('.rr-tile'));
+
+  let rot = 0, target = 0, raf = 0, drag = null, open = null, lastDrag = 0, hover = false, seen = false;
+  const mod = n => ((n % N) + N) % N;
+  const front = () => mod(Math.round(target / STEP));
+  const apply = () => {
+    spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateY(${-rot}deg)`;
+    const f = mod(Math.round(rot / STEP));
+    items.forEach((it, i) => it.classList.toggle('is-front', i === f));
+  };
+  const tick = () => {
+    raf = 0;
+    if (drag) return;
+    const d = target - rot;
+    if (Math.abs(d) < 0.05) { rot = target; apply(); return; }
+    rot += d * 0.14; apply();
+    raf = requestAnimationFrame(tick);
+  };
+  const go = t => {
+    target = t;
+    tiles.forEach((b, i) => { b.tabIndex = i === front() ? 0 : -1; });
+    if (reduceMotion.matches) { rot = t; apply(); } else if (!raf) raf = requestAnimationFrame(tick);
+  };
+  // Por el camino corto: de 11 a 0 avanza uno, no da la vuelta entera.
+  const goTo = i => { const cur = Math.round(target / STEP); let d = mod(i - cur); if (d > N / 2) d -= N; go((cur + d) * STEP); };
+
+  // Arrastre: el mosaico sigue al dedo; al soltar, la velocidad proyecta
+  // hasta dónde llega y se asienta en el mosaico más cercano.
+  const degPerPx = () => 180 / (Math.PI * items[0].offsetWidth * 1.95);
+  ring.addEventListener('pointerdown', e => {
+    if (open || e.button !== 0) return;
+    cancelAnimationFrame(raf); raf = 0;
+    drag = { x: e.clientX, rot, moved: false, samples: [{ x: e.clientX, t: e.timeStamp }] };
+  });
+  addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 5) { drag.moved = true; ring.classList.add('is-dragging'); ring.setPointerCapture?.(e.pointerId); }
+    if (!drag.moved) return;
+    rot = drag.rot - dx * degPerPx(); apply();
+    drag.samples.push({ x: e.clientX, t: e.timeStamp });
+    if (drag.samples.length > 5) drag.samples.shift();
+  });
+  const release = () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    ring.classList.remove('is-dragging');
+    if (!d.moved) return;
+    const a = d.samples[0], b = d.samples[d.samples.length - 1];
+    const v = (b.x - a.x) / Math.max(1, b.t - a.t);
+    go(Math.round((rot - v * 240 * degPerPx()) / STEP) * STEP);
+    lastDrag = performance.now();
+  };
+  addEventListener('pointerup', release);
+  addEventListener('pointercancel', release);
+
+  // Abrir: el mosaico crece hasta un marco centrado (FLIP) y regresa al cerrar.
+  const fromTile = (tile, size) => {
+    const rr = ring.getBoundingClientRect(), tr = tile.getBoundingClientRect();
+    return `translate(${tr.left - rr.left}px, ${tr.top - rr.top}px) scale(${tr.width / size})`;
+  };
+  function openTile(i) {
+    const [file, name, desc] = RESTS[i], tile = tiles[i];
+    const w = ring.clientWidth, h = ring.clientHeight, size = Math.min(h - 72, w - 32, 320);
+    const fig = document.createElement('figure');
+    fig.className = 'rr-enlarge'; fig.tabIndex = -1; fig.setAttribute('aria-label', `Reposo ${name}; Esc para cerrar`);
+    fig.style.width = size + 'px';
+    fig.innerHTML = `<img src="screenshots/rest/${file}.webp" alt="Vista previa de pulse con el reposo ${name}: ${desc}"><figcaption><b>${name}</b> · ${desc}</figcaption>`;
+    fig.style.transition = 'none'; fig.style.opacity = '0'; fig.style.transform = fromTile(tile, size);
+    ring.appendChild(fig); void fig.offsetWidth;
+    fig.style.transition = reduceMotion.matches ? 'none' : '';
+    fig.style.opacity = '1'; fig.style.transform = `translate(${(w - size) / 2}px, ${(h - 28 - size) / 2}px)`;
+    ring.classList.add('is-open');
+    ring.scrollIntoView({ block: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+    fig.addEventListener('click', close);
+    fig.focus({ preventScroll: true });
+    open = { fig, tile, size };
+  }
+  function close() {
+    if (!open) return;
+    const { fig, tile, size } = open; open = null;
+    ring.classList.remove('is-open');
+    fig.style.opacity = '0'; fig.style.transform = fromTile(tile, size);
+    const done = () => fig.remove();
+    if (reduceMotion.matches) done(); else { fig.addEventListener('transitionend', done, { once: true }); setTimeout(done, 450); }
+    tile.focus({ preventScroll: true });
+  }
+  scrim.addEventListener('click', close);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && open) close(); });
+
+  spin.addEventListener('click', e => {
+    const b = e.target.closest('.rr-tile');
+    if (!b || performance.now() - lastDrag < 150) return;
+    const i = +b.dataset.i;
+    i === front() ? openTile(i) : goTo(i);
+  });
+  ring.addEventListener('keydown', e => {
+    if (open || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    e.preventDefault();
+    goTo(front() + (e.key === 'ArrowRight' ? 1 : -1));
+    tiles[front()].focus({ preventScroll: true });
+  });
+
+  // Avanza solo mientras se ve y nadie lo está usando.
+  ring.addEventListener('pointerenter', () => { hover = true; });
+  ring.addEventListener('pointerleave', () => { hover = false; });
+  new IntersectionObserver(([en]) => { seen = en.isIntersecting; }).observe(ring);
+  setInterval(() => {
+    if (seen && !hover && !drag && !open && !document.hidden && !reduceMotion.matches && !ring.contains(document.activeElement)) goTo(front() + 1);
+  }, AUTO_MS);
+
+  go(0); apply();
 })();
 </script>
 </body>

@@ -15,7 +15,7 @@
 ██║   ██║██║    ╚██╔╝  ██╔═══╝ ██╔══██║       ██║   ██║   ██║  ╚██╔╝  ╚════██║
 ╚██████╔╝███████╗██║   ██║     ██║  ██║       ██║   ╚██████╔╝   ██║   ███████║
  ╚═════╝ ╚══════╝╚═╝   ╚═╝     ╚═╝  ╚═╝       ╚═╝    ╚═════╝    ╚═╝   ╚══════╝
-       by Hex (@RemiH06)          version 1.0
+       by RemLam (@RemiH06)          version 1.0
 ```
 
 ![AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg?style=for-the-badge)
@@ -107,4 +107,4 @@ ariadne generate
 
 ## Autoría
 
-por Hex ([@RemiH06](https://github.com/RemiH06))
+por RemLam ([@RemiH06](https://github.com/RemiH06))
